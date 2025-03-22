@@ -1,22 +1,17 @@
 // TellUsAboutYourselfScreen.js
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
   Alert,
   Dimensions,
-  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import { LinearGradient } from 'expo-linear-gradient';
-
-// 1) Firebase imports
-import { auth, db } from '../../config/firebaseConfig';  // <-- Adjust path
-import { doc, updateDoc } from 'firebase/firestore';      // For writing to Firestore
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // 1) Firebase imports
 import { doc, updateDoc } from 'firebase/firestore'; // For writing to Firestore
