@@ -2,23 +2,63 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
-  Image,
   StyleSheet,
+  Image,
+  TextInput,
   ScrollView,
-  Alert
+  Alert,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
-import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
-export default function EditProfileScreen({ navigation }) {
-  const [profileImage, setProfileImage] = useState('https://i.imgur.com/2nCt3Sbl.png');
-  const [name, setName] = useState('Lucy');
-  const [phone, setPhone] = useState('+91 12345 67890');
+const EditProfileScreen = ({ navigation }) => {
+  const { t } = useTranslation();
+  
+  // Static user data
+  const [name, setName] = useState('Lucy Patil');
+  const [phone, setPhone] = useState('+91 1234567890');
   const [email, setEmail] = useState('lucy@example.com');
+  const [address, setAddress] = useState('123 Main Street');
+  const [gender, setGender] = useState('Female');
+  const [dob, setDob] = useState('01/01/1990');
+  const [date, setDate] = useState(new Date(1990, 0, 1));
+  const [avatarUri, setAvatarUri] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
-  // Pick Image Function
+  // Format a Date object as dd/mm/yyyy
+  const formatDate = (date) => {
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  // Dummy save function that simply alerts and navigates back
+  const handleSave = async () => {
+    if (!name.trim()) {
+      Alert.alert(
+        t('common.error'),
+        t('editProfile.nameLabel') + ' ' + t('editProfile.namePlaceholder')
+      );
+      return;
+    }
+    // Add any other validation as needed.
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
+      Alert.alert(t('editProfile.saveButtonText'), t('editProfile.saveButtonText'));
+      navigation.goBack();
+    }, 1000);
+  };
+
+  // Image picking logic (static: only sets local state)
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -28,142 +68,268 @@ export default function EditProfileScreen({ navigation }) {
     });
 
     if (!result.canceled) {
-      setProfileImage(result.assets[0].uri);
+      const uri = result.assets[0].uri;
+      setAvatarUri(uri);
     }
-  };
-
-  // Save Profile Function
-  const saveProfile = () => {
-    if (name.trim() === '' || phone.trim() === '' || email.trim() === '') {
-      Alert.alert('Error', 'All fields are required!');
-      return;
-    }
-    if (!/^\+?\d{10,13}$/.test(phone)) {
-      Alert.alert('Error', 'Enter a valid phone number');
-      return;
-    }
-    if (!/\S+@\S+\.\S+/.test(email)) {
-      Alert.alert('Error', 'Enter a valid email address');
-      return;
-    }
-
-    Alert.alert('Success', 'Profile updated successfully!');
-    navigation.goBack(); // Navigate back to Profile Screen
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-      <TouchableOpacity onPress={pickImage} style={styles.imageContainer}>
-        <Image source={{ uri: profileImage }} style={styles.profileImage} />
-        <View style={styles.cameraIcon}>
-          <Ionicons name="camera" size={20} color="#fff" />
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        {/* Header Section */}
+        <View style={styles.headerContainer}>
+          <View style={styles.headerCurve} />
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <MaterialCommunityIcons name="arrow-left" size={28} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{t('editProfile.headerTitle')}</Text>
+          <TouchableOpacity onPress={pickImage}>
+            <Image
+              source={{ uri: avatarUri || 'https://via.placeholder.com/80' }}
+              style={styles.avatar}
+            />
+            <View style={styles.avatarEditButton}>
+              <MaterialCommunityIcons name="camera" size={18} color="#fff" />
+            </View>
+          </TouchableOpacity>
         </View>
-      </TouchableOpacity>
 
-      {/* Input Fields */}
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>Full Name</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter your name"
-          value={name}
-          onChangeText={setName}
-        />
-      </View>
+        {/* Form Section */}
+        <View style={styles.content}>
+          <Text style={styles.label}>{t('editProfile.nameLabel')}</Text>
+          <TextInput
+            style={styles.input}
+            value={name}
+            onChangeText={setName}
+            placeholder={t('editProfile.namePlaceholder')}
+            placeholderTextColor="#999"
+          />
 
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>Phone Number</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter phone number"
-          keyboardType="phone-pad"
-          value={phone}
-          onChangeText={setPhone}
-        />
-      </View>
+          <Text style={styles.label}>{t('editProfile.phoneLabel')}</Text>
+          <TextInput
+            style={styles.input}
+            value={phone}
+            onChangeText={setPhone}
+            keyboardType="phone-pad"
+            placeholder={t('editProfile.phonePlaceholder')}
+            placeholderTextColor="#999"
+          />
 
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>Email Address</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter your email"
-          keyboardType="email-address"
-          value={email}
-          onChangeText={setEmail}
-        />
-      </View>
+          <Text style={styles.label}>{t('editProfile.emailLabel')}</Text>
+          <TextInput
+            style={styles.input}
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            placeholder={t('editProfile.emailPlaceholder')}
+            placeholderTextColor="#999"
+            autoCapitalize="none"
+          />
 
-      {/* Save Button */}
-      <TouchableOpacity style={styles.saveButton} onPress={saveProfile}>
-        <Text style={styles.saveButtonText}>Save Changes</Text>
-      </TouchableOpacity>
-    </ScrollView>
+          <Text style={styles.label}>{t('editProfile.addressLabel')}</Text>
+          <TextInput
+            style={styles.input}
+            value={address}
+            onChangeText={setAddress}
+            placeholder={t('editProfile.addressPlaceholder')}
+            placeholderTextColor="#999"
+          />
+
+          <Text style={styles.label}>{t('editProfile.genderLabel')}</Text>
+          <View style={styles.genderContainer}>
+            {t('editProfile.genderOptions', { returnObjects: true }).map((option) => (
+              <TouchableOpacity
+                key={option}
+                style={[
+                  styles.genderButton,
+                  gender === option && styles.selectedGender,
+                ]}
+                onPress={() => setGender(option)}
+              >
+                <Text style={gender === option ? styles.selectedGenderText : styles.genderText}>
+                  {option}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={styles.label}>{t('editProfile.dobLabel')}</Text>
+          <TouchableOpacity
+            style={styles.dateInputContainer}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Text style={[styles.dateText, { color: dob ? '#333' : '#999' }]}>
+              {dob ? dob : t('editProfile.dobPlaceholder')}
+            </Text>
+          </TouchableOpacity>
+          {showDatePicker && (
+            <DateTimePicker
+              value={date}
+              mode="date"
+              display="default"
+              maximumDate={new Date()}
+              onChange={(event, selectedDate) => {
+                setShowDatePicker(Platform.OS === 'ios');
+                if (selectedDate) {
+                  setDate(selectedDate);
+                  setDob(formatDate(selectedDate));
+                }
+              }}
+            />
+          )}
+
+          <TouchableOpacity
+            style={styles.saveButton}
+            onPress={handleSave}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.saveButtonText}>
+                {t('editProfile.saveButtonText')}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
-}
+};
+
+export default EditProfileScreen;
 
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1,
-    backgroundColor: '#FFF',
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
+  scrollContainer: {
+    paddingBottom: 100,
+  },
+  genderContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 5,
+  },
+  genderButton: {
+    flex: 1,
+    marginHorizontal: 4,
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#eee',
     alignItems: 'center',
-    paddingVertical: 20,
-    paddingHorizontal: 16,
   },
-  imageContainer: {
+  selectedGender: {
+    backgroundColor: '#FF4B8C',
+    borderColor: '#FF4B8C',
+  },
+  genderText: {
+    color: '#333',
+    fontWeight: '500',
+  },
+  selectedGenderText: {
+    color: '#fff',
+    fontWeight: '500',
+  },
+  headerContainer: {
+    backgroundColor: '#ff5f96',
+    alignItems: 'center',
+    paddingTop: 50,
+    paddingBottom: 30,
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
     position: 'relative',
-    marginBottom: 20,
   },
-  profileImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 3,
-    borderColor: '#FF6699',
-  },
-  cameraIcon: {
+  headerCurve: {
     position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: '#FF6699',
-    padding: 8,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: '#FFF',
-  },
-  inputContainer: {
+    top: '100%',
     width: '100%',
-    marginBottom: 15,
+    height: 30,
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
+  },
+  backButton: {
+    position: 'absolute',
+    left: 20,
+    top: 50,
+  },
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#ddd',
+  },
+  avatarEditButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 130,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: 5,
+    borderRadius: 20,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#fff',
+    marginTop: 10,
+  },
+  content: {
+    flex: 1,
+    marginTop: 20,
+    paddingHorizontal: 20,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#444',
-    marginBottom: 5,
+    color: '#555',
+    marginTop: 20,
   },
   input: {
-    backgroundColor: '#F5F5F5',
-    paddingHorizontal: 15,
-    paddingVertical: 12,
+    backgroundColor: '#fff',
     borderRadius: 10,
+    padding: 15,
+    marginTop: 5,
     fontSize: 16,
+    color: '#333',
     borderWidth: 1,
-    borderColor: '#DDD',
+    borderColor: '#eee',
+  },
+  dateInputContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 15,
+    marginTop: 5,
+    borderWidth: 1,
+    borderColor: '#eee',
+    justifyContent: 'center',
+  },
+  dateText: {
+    fontSize: 16,
   },
   saveButton: {
-    marginTop: 10,
-    backgroundColor: '#FF6699',
-    paddingVertical: 14,
-    paddingHorizontal: 50,
-    borderRadius: 12,
+    backgroundColor: '#FF4B8C',
+    marginTop: 30,
+    marginBottom: 20,
+    paddingVertical: 16,
+    marginHorizontal: 60,
+    borderRadius: 20,
+    alignItems: 'center',
+    elevation: 3,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
-    elevation: 5,
   },
   saveButtonText: {
-    color: '#FFF',
-    fontSize: 18,
-    fontWeight: 'bold',
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
 });
