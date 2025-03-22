@@ -2,38 +2,63 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
-  Image,
   StyleSheet,
+  Image,
+  TextInput,
   ScrollView,
   Alert,
-  Animated,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next';
 
-export default function EditProfileScreen({ navigation }) {
-  const [profileImage, setProfileImage] = useState('https://i.imgur.com/2nCt3Sbl.png');
-  const [name, setName] = useState('Lucy');
-  const [phone, setPhone] = useState('+91 12345 67890');
+const EditProfileScreen = ({ navigation }) => {
+  const { t } = useTranslation();
+  
+  // Static user data
+  const [name, setName] = useState('Lucy Patil');
+  const [phone, setPhone] = useState('+91 1234567890');
   const [email, setEmail] = useState('lucy@example.com');
-  const [bio, setBio] = useState('A passionate developer and designer.');
-  const [location, setLocation] = useState('New York, USA');
-  const [dob, setDob] = useState('1990-01-01');
+  const [address, setAddress] = useState('123 Main Street');
+  const [gender, setGender] = useState('Female');
+  const [dob, setDob] = useState('01/01/1990');
+  const [date, setDate] = useState(new Date(1990, 0, 1));
+  const [avatarUri, setAvatarUri] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
-  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+  // Format a Date object as dd/mm/yyyy
+  const formatDate = (date) => {
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
 
-  React.useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 1000,
-      useNativeDriver: true,
-    }).start();
-  }, [fadeAnim]);
+  // Dummy save function that simply alerts and navigates back
+  const handleSave = async () => {
+    if (!name.trim()) {
+      Alert.alert(
+        t('common.error'),
+        t('editProfile.nameLabel') + ' ' + t('editProfile.namePlaceholder')
+      );
+      return;
+    }
+    // Add any other validation as needed.
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
+      Alert.alert(t('editProfile.saveButtonText'), t('editProfile.saveButtonText'));
+      navigation.goBack();
+    }, 1000);
+  };
 
-  // Pick Image Function
+  // Image picking logic (static: only sets local state)
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -43,216 +68,268 @@ export default function EditProfileScreen({ navigation }) {
     });
 
     if (!result.canceled) {
-      setProfileImage(result.assets[0].uri);
+      const uri = result.assets[0].uri;
+      setAvatarUri(uri);
     }
-  };
-
-  // Save Profile Function
-  const saveProfile = () => {
-    if (name.trim() === '' || phone.trim() === '' || email.trim() === '') {
-      Alert.alert('Error', 'All fields are required!');
-      return;
-    }
-    if (!/^\+?\d{10,13}$/.test(phone)) {
-      Alert.alert('Error', 'Enter a valid phone number');
-      return;
-    }
-    if (!/\S+@\S+\.\S+/.test(email)) {
-      Alert.alert('Error', 'Enter a valid email address');
-      return;
-    }
-
-    Alert.alert('Success', 'Profile updated successfully!');
-    navigation.goBack(); // Navigate back to Profile Screen
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Gradient Header */}
-      <LinearGradient
-        colors={['#FF6699', '#FF3366']}
-        style={styles.header}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <TouchableOpacity onPress={pickImage} style={styles.imageContainer}>
-          <Image source={{ uri: profileImage }} style={styles.profileImage} />
-          <View style={styles.cameraIcon}>
-            <Ionicons name="camera" size={20} color="#fff" />
-          </View>
-        </TouchableOpacity>
-      </LinearGradient>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        {/* Header Section */}
+        <View style={styles.headerContainer}>
+          <View style={styles.headerCurve} />
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <MaterialCommunityIcons name="arrow-left" size={28} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{t('editProfile.headerTitle')}</Text>
+          <TouchableOpacity onPress={pickImage}>
+            <Image
+              source={{ uri: avatarUri || 'https://via.placeholder.com/80' }}
+              style={styles.avatar}
+            />
+            <View style={styles.avatarEditButton}>
+              <MaterialCommunityIcons name="camera" size={18} color="#fff" />
+            </View>
+          </TouchableOpacity>
+        </View>
 
-      {/* Input Fields */}
-      <Animated.View style={[styles.inputContainer, { opacity: fadeAnim }]}>
-        <Text style={styles.label}>Full Name</Text>
-        <View style={styles.inputWrapper}>
-          <Ionicons name="person-outline" size={20} color="#666" style={styles.inputIcon} />
+        {/* Form Section */}
+        <View style={styles.content}>
+          <Text style={styles.label}>{t('editProfile.nameLabel')}</Text>
           <TextInput
             style={styles.input}
-            placeholder="Enter your name"
             value={name}
             onChangeText={setName}
+            placeholder={t('editProfile.namePlaceholder')}
+            placeholderTextColor="#999"
           />
-        </View>
-      </Animated.View>
 
-      <Animated.View style={[styles.inputContainer, { opacity: fadeAnim }]}>
-        <Text style={styles.label}>Phone Number</Text>
-        <View style={styles.inputWrapper}>
-          <Ionicons name="call-outline" size={20} color="#666" style={styles.inputIcon} />
+          <Text style={styles.label}>{t('editProfile.phoneLabel')}</Text>
           <TextInput
             style={styles.input}
-            placeholder="Enter phone number"
-            keyboardType="phone-pad"
             value={phone}
             onChangeText={setPhone}
+            keyboardType="phone-pad"
+            placeholder={t('editProfile.phonePlaceholder')}
+            placeholderTextColor="#999"
           />
-        </View>
-      </Animated.View>
 
-      <Animated.View style={[styles.inputContainer, { opacity: fadeAnim }]}>
-        <Text style={styles.label}>Email Address</Text>
-        <View style={styles.inputWrapper}>
-          <Ionicons name="mail-outline" size={20} color="#666" style={styles.inputIcon} />
+          <Text style={styles.label}>{t('editProfile.emailLabel')}</Text>
           <TextInput
             style={styles.input}
-            placeholder="Enter your email"
-            keyboardType="email-address"
             value={email}
             onChangeText={setEmail}
+            keyboardType="email-address"
+            placeholder={t('editProfile.emailPlaceholder')}
+            placeholderTextColor="#999"
+            autoCapitalize="none"
           />
-        </View>
-      </Animated.View>
 
-      <Animated.View style={[styles.inputContainer, { opacity: fadeAnim }]}>
-        <Text style={styles.label}>Bio</Text>
-        <View style={styles.inputWrapper}>
-          <Ionicons name="pencil-outline" size={20} color="#666" style={styles.inputIcon} />
+          <Text style={styles.label}>{t('editProfile.addressLabel')}</Text>
           <TextInput
             style={styles.input}
-            placeholder="Tell us about yourself"
-            value={bio}
-            onChangeText={setBio}
-            multiline
+            value={address}
+            onChangeText={setAddress}
+            placeholder={t('editProfile.addressPlaceholder')}
+            placeholderTextColor="#999"
           />
-        </View>
-      </Animated.View>
 
-      <Animated.View style={[styles.inputContainer, { opacity: fadeAnim }]}>
-        <Text style={styles.label}>Location</Text>
-        <View style={styles.inputWrapper}>
-          <Ionicons name="location-outline" size={20} color="#666" style={styles.inputIcon} />
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your location"
-            value={location}
-            onChangeText={setLocation}
-          />
-        </View>
-      </Animated.View>
+          <Text style={styles.label}>{t('editProfile.genderLabel')}</Text>
+          <View style={styles.genderContainer}>
+            {t('editProfile.genderOptions', { returnObjects: true }).map((option) => (
+              <TouchableOpacity
+                key={option}
+                style={[
+                  styles.genderButton,
+                  gender === option && styles.selectedGender,
+                ]}
+                onPress={() => setGender(option)}
+              >
+                <Text style={gender === option ? styles.selectedGenderText : styles.genderText}>
+                  {option}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
-      <Animated.View style={[styles.inputContainer, { opacity: fadeAnim }]}>
-        <Text style={styles.label}>Date of Birth</Text>
-        <View style={styles.inputWrapper}>
-          <Ionicons name="calendar-outline" size={20} color="#666" style={styles.inputIcon} />
-          <TextInput
-            style={styles.input}
-            placeholder="YYYY-MM-DD"
-            value={dob}
-            onChangeText={setDob}
-            keyboardType="numeric"
-          />
-        </View>
-      </Animated.View>
+          <Text style={styles.label}>{t('editProfile.dobLabel')}</Text>
+          <TouchableOpacity
+            style={styles.dateInputContainer}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Text style={[styles.dateText, { color: dob ? '#333' : '#999' }]}>
+              {dob ? dob : t('editProfile.dobPlaceholder')}
+            </Text>
+          </TouchableOpacity>
+          {showDatePicker && (
+            <DateTimePicker
+              value={date}
+              mode="date"
+              display="default"
+              maximumDate={new Date()}
+              onChange={(event, selectedDate) => {
+                setShowDatePicker(Platform.OS === 'ios');
+                if (selectedDate) {
+                  setDate(selectedDate);
+                  setDob(formatDate(selectedDate));
+                }
+              }}
+            />
+          )}
 
-      {/* Save Button */}
-      <TouchableOpacity style={styles.saveButton} onPress={saveProfile}>
-        <Text style={styles.saveButtonText}>Save Changes</Text>
-      </TouchableOpacity>
-    </ScrollView>
+          <TouchableOpacity
+            style={styles.saveButton}
+            onPress={handleSave}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.saveButtonText}>
+                {t('editProfile.saveButtonText')}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
-}
+};
+
+export default EditProfileScreen;
 
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1,
-    backgroundColor: '#FFF',
-    paddingBottom: 20,
+    flex: 1,
+    backgroundColor: '#f8f9fa',
   },
-  header: {
+  scrollContainer: {
+    paddingBottom: 100,
+  },
+  genderContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 5,
+  },
+  genderButton: {
+    flex: 1,
+    marginHorizontal: 4,
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#eee',
     alignItems: 'center',
-    paddingTop: 60,
-    paddingBottom: 40,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-    marginBottom: 20,
   },
-  imageContainer: {
+  selectedGender: {
+    backgroundColor: '#FF4B8C',
+    borderColor: '#FF4B8C',
+  },
+  genderText: {
+    color: '#333',
+    fontWeight: '500',
+  },
+  selectedGenderText: {
+    color: '#fff',
+    fontWeight: '500',
+  },
+  headerContainer: {
+    backgroundColor: '#ff5f96',
+    alignItems: 'center',
+    paddingTop: 50,
+    paddingBottom: 30,
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
     position: 'relative',
   },
-  profileImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 3,
-    borderColor: '#FFF',
-  },
-  cameraIcon: {
+  headerCurve: {
     position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: '#FF6699',
-    padding: 8,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: '#FFF',
-  },
-  inputContainer: {
+    top: '100%',
     width: '100%',
-    marginBottom: 15,
+    height: 30,
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
+  },
+  backButton: {
+    position: 'absolute',
+    left: 20,
+    top: 50,
+  },
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#ddd',
+  },
+  avatarEditButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 130,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: 5,
+    borderRadius: 20,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#fff',
+    marginTop: 10,
+  },
+  content: {
+    flex: 1,
+    marginTop: 20,
     paddingHorizontal: 20,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#444',
-    marginBottom: 5,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    borderWidth: 1,
-    borderColor: '#DDD',
-  },
-  inputIcon: {
-    marginRight: 10,
+    color: '#555',
+    marginTop: 20,
   },
   input: {
-    flex: 1,
-    paddingVertical: 12,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 15,
+    marginTop: 5,
     fontSize: 16,
     color: '#333',
+    borderWidth: 1,
+    borderColor: '#eee',
+  },
+  dateInputContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 15,
+    marginTop: 5,
+    borderWidth: 1,
+    borderColor: '#eee',
+    justifyContent: 'center',
+  },
+  dateText: {
+    fontSize: 16,
   },
   saveButton: {
-    marginTop: 20,
-    backgroundColor: '#FF6699',
-    paddingVertical: 14,
-    borderRadius: 12,
+    backgroundColor: '#FF4B8C',
+    marginTop: 30,
+    marginBottom: 20,
+    paddingVertical: 16,
+    marginHorizontal: 60,
+    borderRadius: 20,
     alignItems: 'center',
-    marginHorizontal: 20,
+    elevation: 3,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
-    elevation: 5,
   },
   saveButtonText: {
-    color: '#FFF',
-    fontSize: 18,
-    fontWeight: 'bold',
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
 });
