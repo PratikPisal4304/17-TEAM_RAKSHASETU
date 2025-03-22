@@ -19,7 +19,7 @@ const Sidebar = () => {
           <span className="text-danger">
             <HiOutlineExclamationCircle size={24} />
           </span>
-          SafeGuard
+         RakshaSetu
         </h1>
       </div>
 
