@@ -1,6 +1,6 @@
 // SplashScreen.js
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 
 export default function SplashScreen({ navigation }) {
   // Animated values for fade & scale
@@ -44,6 +44,11 @@ export default function SplashScreen({ navigation }) {
       >
         RakshaSetu
       </Animated.Text>
+
+      {/* Sanskrit Shloka in smaller font */}
+      <Text style={styles.shloka}>
+        यत्र नार्यस्तु पूज्यन्ते रमन्ते तत्र देवताः
+      </Text>
     </View>
   );
 }
@@ -60,5 +65,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#fff',
     letterSpacing: 1.2,
+  },
+  shloka: {
+    marginTop: 10,
+    fontSize: 14,
+    color: '#fff',
+    fontStyle: 'italic',
+    textAlign: 'center',
   },
 });
