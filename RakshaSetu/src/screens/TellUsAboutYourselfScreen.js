@@ -13,6 +13,10 @@ import {
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+// 1) Firebase imports
+import { doc, updateDoc } from 'firebase/firestore'; // For writing to Firestore
+import { auth, db } from '../../config/firebaseConfig'; // <-- Adjust path
+
 const { width, height } = Dimensions.get('window');
 const PINK = '#ff5f96';
 
@@ -24,7 +28,8 @@ export default function TellUsAboutYourselfScreen({ navigation }) {
 
   const allowDigitsOnly = (text) => text.replace(/[^0-9]/g, '');
 
-  const handleContinue = () => {
+  // 2) Updated handleContinue to store data in Firestore
+  const handleContinue = async () => {
     if (!name.trim()) {
       Alert.alert('Error', 'Please enter your name.');
       return;
@@ -34,24 +39,49 @@ export default function TellUsAboutYourselfScreen({ navigation }) {
       return;
     }
 
-    Alert.alert(
-      'Info',
-      `Name: ${name}\nDOB: ${day}/${month}/${year}\nData saved!`
-    );
-    navigation.replace('MainTabs');
+    try {
+      // Ensure we have a current user from Firebase Auth
+      const user = auth.currentUser;
+      if (!user) {
+        Alert.alert('Error', 'No user found. Please sign in first.');
+        return;
+      }
+
+      // 3) Update user doc in Firestore with name & DOB
+      await updateDoc(doc(db, 'users', user.uid), {
+        name: name,
+        dob: {
+          day: day,
+          month: month,
+          year: year,
+        },
+      });
+
+      Alert.alert(
+        'Info',
+        `Name: ${name}\nDOB: ${day}/${month}/${year}\nData saved!`
+      );
+      // e.g. navigate to your MainTabs or next screen
+      navigation.replace('MainTabs');
+    } catch (error) {
+      Alert.alert('Error', error.message);
+    }
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <KeyboardAwareScrollView contentContainerStyle={{ flexGrow: 1 }} bounces={false}>
+        {/* Pink gradient background */}
         <LinearGradient
           colors={['#ff9dbf', PINK]}
           style={styles.gradientBackground}
         >
+          {/* Top section: Title */}
           <View style={styles.topSection}>
             <Text style={styles.headerTitle}>Tell us about yourself</Text>
           </View>
 
+          {/* White pill container for form */}
           <View style={styles.formCard}>
             <Text style={styles.label}>Enter your name</Text>
             <TextInput
@@ -64,6 +94,7 @@ export default function TellUsAboutYourselfScreen({ navigation }) {
 
             <Text style={[styles.label, { marginTop: 20 }]}>Date of Birth</Text>
             <View style={styles.dobRow}>
+              {/* DD */}
               <TextInput
                 style={[styles.dobInput, { marginRight: 10 }]}
                 placeholder="DD"
@@ -73,6 +104,7 @@ export default function TellUsAboutYourselfScreen({ navigation }) {
                 value={day}
                 onChangeText={(text) => setDay(allowDigitsOnly(text))}
               />
+              {/* MM */}
               <TextInput
                 style={[styles.dobInput, { marginRight: 10 }]}
                 placeholder="MM"
@@ -82,6 +114,7 @@ export default function TellUsAboutYourselfScreen({ navigation }) {
                 value={month}
                 onChangeText={(text) => setMonth(allowDigitsOnly(text))}
               />
+              {/* YYYY */}
               <TextInput
                 style={styles.dobInput}
                 placeholder="YYYY"
@@ -93,6 +126,7 @@ export default function TellUsAboutYourselfScreen({ navigation }) {
               />
             </View>
 
+            {/* Continue button */}
             <TouchableOpacity style={styles.continueButton} onPress={handleContinue}>
               <Text style={styles.continueButtonText}>Continue</Text>
             </TouchableOpacity>
@@ -103,8 +137,8 @@ export default function TellUsAboutYourselfScreen({ navigation }) {
   );
 }
 
-// Styles remain the same
-const CARD_HEIGHT = 300;
+// ================== STYLES ==================
+const CARD_HEIGHT = 300; // Adjust as needed
 
 const styles = StyleSheet.create({
   container: {
