@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,41 +12,29 @@ import {
   Animated,
   TouchableWithoutFeedback,
 } from 'react-native';
+import { 
+  collection, 
+  query, 
+  getDocs, 
+  updateDoc, 
+  writeBatch, 
+  orderBy 
+} from 'firebase/firestore';
+import { ActivityIndicator } from 'react-native';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
-import { ActivityIndicator } from 'react-native';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../../config/firebaseConfig'; // adjust path if needed
 import { useTranslation } from 'react-i18next';
 
 const PINK = '#ff5f96';
 
 const HomeScreen = ({ navigation }) => {
   const { t } = useTranslation();
-  
-  // Static user data
-  const [username] = useState('Lucy Patil');
-  const [avatarUrl] = useState(null);
-  
+  const [username, setUsername] = useState('Lucy Patil'); // fallback
+  const [avatarUrl, setAvatarUrl] = useState(null);
   const [notificationModalVisible, setNotificationModalVisible] = useState(false);
-  // Static notifications list (for demo purposes)
-  const staticNotifications = [
-    {
-      id: '1',
-      title: 'Welcome!',
-      message: 'Thanks for joining our platform.',
-      timestamp: new Date(),
-      read: false,
-    },
-    {
-      id: '2',
-      title: 'Reminder',
-      message: 'Don’t forget to check out our new features.',
-      timestamp: new Date(),
-      read: true,
-    },
-  ];
-  const [notifications] = useState(staticNotifications);
-  const [loading] = useState(false);
 
   // Animated values for scale and opacity
   const modalScale = useRef(new Animated.Value(0)).current;
@@ -81,7 +69,108 @@ const HomeScreen = ({ navigation }) => {
         }),
       ]).start();
     }
-  }, [notificationModalVisible, modalOpacity, modalScale]);
+  }, [notificationModalVisible]);
+
+  // Fetch user data from Firestore on mount
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
+    (async () => {
+      try {
+        const docRef = doc(db, 'users', user.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data.name) setUsername(data.name);
+          if (data.avatarUrl) setAvatarUrl(data.avatarUrl);
+        }
+      } catch (error) {
+        console.log('Error fetching user data:', error.message);
+      }
+    })();
+  }, []);
+  // Add this to your state declarations
+const [notifications, setNotifications] = useState([]);
+const [loading, setLoading] = useState(false);
+
+// Add this function to fetch notifications
+const fetchNotifications = async () => {
+  setLoading(true);
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+    
+    // Query your notifications collection
+    const notificationsRef = collection(db, 'users', user.uid, 'notifications');
+    const q = query(notificationsRef, orderBy('timestamp', 'desc'));
+    const querySnapshot = await getDocs(q);
+    
+    const notificationData = [];
+    querySnapshot.forEach((doc) => {
+      notificationData.push({
+        id: doc.id,
+        ...doc.data(),
+      });
+    });
+    
+    setNotifications(notificationData);
+  } catch (error) {
+    console.log('Error fetching notifications:', error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+// Add this useEffect to fetch notifications when modal opens
+useEffect(() => {
+  if (notificationModalVisible) {
+    fetchNotifications();
+  }
+}, [notificationModalVisible]);
+
+// Add this function to mark notification as read
+const markAsRead = async (notificationId) => {
+  try {
+    const user = auth.currentUser;
+    if (!user) return;
+    
+    const notificationRef = doc(db, 'users', user.uid, 'notifications', notificationId);
+    await updateDoc(notificationRef, {
+      read: true
+    });
+    
+    // Update local state
+    setNotifications(notifications.map(item => 
+      item.id === notificationId ? {...item, read: true} : item
+    ));
+  } catch (error) {
+    console.log('Error marking notification as read:', error);
+  }
+};
+
+// Add this function to clear all notifications
+const clearAllNotifications = async () => {
+  try {
+    const user = auth.currentUser;
+    if (!user) return;
+    
+    const batch = writeBatch(db);
+    const notificationsRef = collection(db, 'users', user.uid, 'notifications');
+    const querySnapshot = await getDocs(notificationsRef);
+    
+    querySnapshot.forEach((doc) => {
+      batch.delete(doc.ref);
+    });
+    
+    await batch.commit();
+    setNotifications([]);
+  } catch (error) {
+    console.log('Error clearing notifications:', error);
+  }
+};
 
   const openNearbyPoliceStations = async () => {
     try {
@@ -136,71 +225,80 @@ const HomeScreen = ({ navigation }) => {
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
       {/* Notification Modal */}
-      <Modal
-        transparent={true}
-        visible={notificationModalVisible}
-        onRequestClose={() => setNotificationModalVisible(false)}
-        animationType="none"
+{/* Notification Modal */}
+<Modal
+  transparent={true}
+  visible={notificationModalVisible}
+  onRequestClose={() => setNotificationModalVisible(false)}
+  animationType="none"
+>
+  <TouchableWithoutFeedback onPress={() => setNotificationModalVisible(false)}>
+    <View style={styles.modalOverlay}>
+      <Animated.View
+        style={[
+          styles.modalContainer,
+          {
+            transform: [{ scale: modalScale }],
+            opacity: modalOpacity,
+          },
+        ]}
       >
-        <TouchableWithoutFeedback onPress={() => setNotificationModalVisible(false)}>
-          <View style={styles.modalOverlay}>
-            <Animated.View
-              style={[
-                styles.modalContainer,
-                {
-                  transform: [{ scale: modalScale }],
-                  opacity: modalOpacity,
-                },
-              ]}
+        <View style={styles.notificationHeader}>
+          <Ionicons name="notifications" size={20} color="#fff" />
+          <Text style={styles.notificationHeaderText}>Notifications</Text>
+        </View>
+        
+        <ScrollView style={styles.notificationBody}>
+          {loading ? (
+            <ActivityIndicator color={PINK} size="small" style={{ padding: 20 }} />
+          ) : notifications.length > 0 ? (
+            notifications.map((notification) => (
+              <TouchableOpacity 
+                key={notification.id}
+                style={[
+                  styles.notificationItem,
+                  { backgroundColor: notification.read ? '#F8F8F8' : '#FFF0F5' }
+                ]}
+                onPress={() => markAsRead(notification.id)}
+              >
+                <Text style={styles.notificationTitle}>{notification.title}</Text>
+                <Text style={styles.notificationMessage}>{notification.message}</Text>
+                <Text style={styles.notificationTime}>
+                  {notification.timestamp?.toDate().toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })} · {notification.timestamp?.toDate().toLocaleDateString()}
+                </Text>
+              </TouchableOpacity>
+            ))
+          ) : (
+            <View style={styles.emptyNotification}>
+              <Ionicons name="notifications-off-outline" size={40} color="#DDD" />
+              <Text style={styles.emptyNotificationText}>No new notifications</Text>
+            </View>
+          )}
+        </ScrollView>
+        
+        <View style={{ flexDirection: 'row' }}>
+          {notifications.length > 0 && (
+            <TouchableOpacity 
+              style={[styles.closeButton, { flex: 1, borderRightWidth: 1, borderRightColor: '#EEE' }]}
+              onPress={clearAllNotifications}
             >
-              <View style={styles.notificationHeader}>
-                <Ionicons name="notifications" size={20} color="#fff" />
-                <Text style={styles.notificationHeaderText}>Notifications</Text>
-              </View>
-
-              <ScrollView style={styles.notificationBody}>
-                {loading ? (
-                  <ActivityIndicator color={PINK} size="small" style={{ padding: 20 }} />
-                ) : notifications.length > 0 ? (
-                  notifications.map((notification) => (
-                    <View
-                      key={notification.id}
-                      style={[
-                        styles.notificationItem,
-                        { backgroundColor: notification.read ? '#F8F8F8' : '#FFF0F5' },
-                      ]}
-                    >
-                      <Text style={styles.notificationTitle}>{notification.title}</Text>
-                      <Text style={styles.notificationMessage}>{notification.message}</Text>
-                      <Text style={styles.notificationTime}>
-                        {notification.timestamp.toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}{' '}
-                        · {notification.timestamp.toLocaleDateString()}
-                      </Text>
-                    </View>
-                  ))
-                ) : (
-                  <View style={styles.emptyNotification}>
-                    <Ionicons name="notifications-off-outline" size={40} color="#DDD" />
-                    <Text style={styles.emptyNotificationText}>No new notifications</Text>
-                  </View>
-                )}
-              </ScrollView>
-
-              <View style={{ flexDirection: 'row' }}>
-                <TouchableOpacity
-                  style={[styles.closeButton, { flex: 1 }]}
-                  onPress={() => setNotificationModalVisible(false)}
-                >
-                  <Text style={styles.closeButtonText}>Dismiss</Text>
-                </TouchableOpacity>
-              </View>
-            </Animated.View>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
+              <Text style={styles.closeButtonText}>Clear All</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity 
+            style={[styles.closeButton, { flex: 1 }]}
+            onPress={() => setNotificationModalVisible(false)}
+          >
+            <Text style={styles.closeButtonText}>Dismiss</Text>
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
+    </View>
+  </TouchableWithoutFeedback>
+</Modal>
 
       <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}>
         {/* Pink Header with Curve */}
@@ -561,6 +659,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#000',
   },
+  // Modal styles
+// Updated modal styling for a softer, more modern look
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.4)',
@@ -651,6 +751,20 @@ const styles = StyleSheet.create({
   closeButtonText: {
     color: PINK,
     fontWeight: '600',
+    fontSize: 15,
+  },
+  clearAllButton: {
+    backgroundColor: '#fff',
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    borderRightWidth: 1,
+    borderRightColor: '#eee',
+  },
+  clearAllButtonText: {
+    color: '#777',
+    fontWeight: '500',
     fontSize: 15,
   },
 });
