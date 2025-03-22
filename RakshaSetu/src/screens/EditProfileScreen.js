@@ -7,16 +7,31 @@ import {
   Image,
   StyleSheet,
   ScrollView,
-  Alert
+  Alert,
+  Animated,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function EditProfileScreen({ navigation }) {
   const [profileImage, setProfileImage] = useState('https://i.imgur.com/2nCt3Sbl.png');
   const [name, setName] = useState('Lucy');
   const [phone, setPhone] = useState('+91 12345 67890');
   const [email, setEmail] = useState('lucy@example.com');
+  const [bio, setBio] = useState('A passionate developer and designer.');
+  const [location, setLocation] = useState('New York, USA');
+  const [dob, setDob] = useState('1990-01-01');
+
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 1000,
+      useNativeDriver: true,
+    }).start();
+  }, [fadeAnim]);
 
   // Pick Image Function
   const pickImage = async () => {
@@ -53,45 +68,103 @@ export default function EditProfileScreen({ navigation }) {
 
   return (
     <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-      <TouchableOpacity onPress={pickImage} style={styles.imageContainer}>
-        <Image source={{ uri: profileImage }} style={styles.profileImage} />
-        <View style={styles.cameraIcon}>
-          <Ionicons name="camera" size={20} color="#fff" />
-        </View>
-      </TouchableOpacity>
+      {/* Gradient Header */}
+      <LinearGradient
+        colors={['#FF6699', '#FF3366']}
+        style={styles.header}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <TouchableOpacity onPress={pickImage} style={styles.imageContainer}>
+          <Image source={{ uri: profileImage }} style={styles.profileImage} />
+          <View style={styles.cameraIcon}>
+            <Ionicons name="camera" size={20} color="#fff" />
+          </View>
+        </TouchableOpacity>
+      </LinearGradient>
 
       {/* Input Fields */}
-      <View style={styles.inputContainer}>
+      <Animated.View style={[styles.inputContainer, { opacity: fadeAnim }]}>
         <Text style={styles.label}>Full Name</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter your name"
-          value={name}
-          onChangeText={setName}
-        />
-      </View>
+        <View style={styles.inputWrapper}>
+          <Ionicons name="person-outline" size={20} color="#666" style={styles.inputIcon} />
+          <TextInput
+            style={styles.input}
+            placeholder="Enter your name"
+            value={name}
+            onChangeText={setName}
+          />
+        </View>
+      </Animated.View>
 
-      <View style={styles.inputContainer}>
+      <Animated.View style={[styles.inputContainer, { opacity: fadeAnim }]}>
         <Text style={styles.label}>Phone Number</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter phone number"
-          keyboardType="phone-pad"
-          value={phone}
-          onChangeText={setPhone}
-        />
-      </View>
+        <View style={styles.inputWrapper}>
+          <Ionicons name="call-outline" size={20} color="#666" style={styles.inputIcon} />
+          <TextInput
+            style={styles.input}
+            placeholder="Enter phone number"
+            keyboardType="phone-pad"
+            value={phone}
+            onChangeText={setPhone}
+          />
+        </View>
+      </Animated.View>
 
-      <View style={styles.inputContainer}>
+      <Animated.View style={[styles.inputContainer, { opacity: fadeAnim }]}>
         <Text style={styles.label}>Email Address</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter your email"
-          keyboardType="email-address"
-          value={email}
-          onChangeText={setEmail}
-        />
-      </View>
+        <View style={styles.inputWrapper}>
+          <Ionicons name="mail-outline" size={20} color="#666" style={styles.inputIcon} />
+          <TextInput
+            style={styles.input}
+            placeholder="Enter your email"
+            keyboardType="email-address"
+            value={email}
+            onChangeText={setEmail}
+          />
+        </View>
+      </Animated.View>
+
+      <Animated.View style={[styles.inputContainer, { opacity: fadeAnim }]}>
+        <Text style={styles.label}>Bio</Text>
+        <View style={styles.inputWrapper}>
+          <Ionicons name="pencil-outline" size={20} color="#666" style={styles.inputIcon} />
+          <TextInput
+            style={styles.input}
+            placeholder="Tell us about yourself"
+            value={bio}
+            onChangeText={setBio}
+            multiline
+          />
+        </View>
+      </Animated.View>
+
+      <Animated.View style={[styles.inputContainer, { opacity: fadeAnim }]}>
+        <Text style={styles.label}>Location</Text>
+        <View style={styles.inputWrapper}>
+          <Ionicons name="location-outline" size={20} color="#666" style={styles.inputIcon} />
+          <TextInput
+            style={styles.input}
+            placeholder="Enter your location"
+            value={location}
+            onChangeText={setLocation}
+          />
+        </View>
+      </Animated.View>
+
+      <Animated.View style={[styles.inputContainer, { opacity: fadeAnim }]}>
+        <Text style={styles.label}>Date of Birth</Text>
+        <View style={styles.inputWrapper}>
+          <Ionicons name="calendar-outline" size={20} color="#666" style={styles.inputIcon} />
+          <TextInput
+            style={styles.input}
+            placeholder="YYYY-MM-DD"
+            value={dob}
+            onChangeText={setDob}
+            keyboardType="numeric"
+          />
+        </View>
+      </Animated.View>
 
       {/* Save Button */}
       <TouchableOpacity style={styles.saveButton} onPress={saveProfile}>
@@ -105,20 +178,25 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     backgroundColor: '#FFF',
+    paddingBottom: 20,
+  },
+  header: {
     alignItems: 'center',
-    paddingVertical: 20,
-    paddingHorizontal: 16,
+    paddingTop: 60,
+    paddingBottom: 40,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    marginBottom: 20,
   },
   imageContainer: {
     position: 'relative',
-    marginBottom: 20,
   },
   profileImage: {
     width: 120,
     height: 120,
     borderRadius: 60,
     borderWidth: 3,
-    borderColor: '#FF6699',
+    borderColor: '#FFF',
   },
   cameraIcon: {
     position: 'absolute',
@@ -133,6 +211,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     width: '100%',
     marginBottom: 15,
+    paddingHorizontal: 20,
   },
   label: {
     fontSize: 14,
@@ -140,21 +219,31 @@ const styles = StyleSheet.create({
     color: '#444',
     marginBottom: 5,
   },
-  input: {
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#F5F5F5',
-    paddingHorizontal: 15,
-    paddingVertical: 12,
     borderRadius: 10,
-    fontSize: 16,
+    paddingHorizontal: 15,
     borderWidth: 1,
     borderColor: '#DDD',
   },
+  inputIcon: {
+    marginRight: 10,
+  },
+  input: {
+    flex: 1,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#333',
+  },
   saveButton: {
-    marginTop: 10,
+    marginTop: 20,
     backgroundColor: '#FF6699',
     paddingVertical: 14,
-    paddingHorizontal: 50,
     borderRadius: 12,
+    alignItems: 'center',
+    marginHorizontal: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.2,
