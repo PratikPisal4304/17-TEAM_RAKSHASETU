@@ -1,12 +1,567 @@
-import { View, Text } from 'react-native'
-import React from 'react'
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  View, 
+  Text, 
+  TextInput, 
+  TouchableOpacity, 
+  StyleSheet, 
+  ScrollView, 
+  ActivityIndicator, 
+  SafeAreaView,
+  StatusBar,
+  Alert,
+  Linking
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
-const AddCloseFriendsScreen = () => {
+export default function AddFriendsScreen({ navigation }) {
+  const [contacts, setContacts] = useState([]);
+  const [filteredContacts, setFilteredContacts] = useState([]);
+  const [selectedContacts, setSelectedContacts] = useState([]); // will hold contact IDs
+  const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+  const [contactsCount, setContactsCount] = useState(0);
+
+  // Static contacts array to simulate data
+  const staticContacts = [
+    { id: '1', name: 'Alice Johnson', phoneNumbers: [{ number: '123-456-7890' }] },
+    { id: '2', name: 'Bob Smith', phoneNumbers: [{ number: '987-654-3210' }] },
+    { id: '3', name: 'Charlie Brown', phoneNumbers: [{ number: '555-123-4567' }] },
+    { id: '4', name: 'David Williams', phoneNumbers: [{ number: '555-987-6543' }] },
+    { id: '5', name: 'Eva Green', phoneNumbers: [{ number: '555-000-1111' }] },
+  ];
+
+  // Load static contacts on mount
+  useEffect(() => {
+    setLoading(true);
+    // Simulate a loading delay
+    setTimeout(() => {
+      // Sort contacts alphabetically
+      const sortedContacts = [...staticContacts].sort((a, b) => {
+        if (!a.name) return 1;
+        if (!b.name) return -1;
+        return a.name.localeCompare(b.name);
+      });
+      setContacts(sortedContacts);
+      setFilteredContacts(sortedContacts);
+      setContactsCount(sortedContacts.length);
+      setLoading(false);
+    }, 500);
+  }, []);
+
+  // Open device settings (if needed)
+  const openContactSettings = () => {
+    Linking.openSettings().catch(() =>
+      Alert.alert('Error', 'Unable to open settings.')
+    );
+  };
+
+  // Toggle selection for a contact
+  const toggleContactSelection = (id) => {
+    setSelectedContacts((prev) =>
+      prev.includes(id)
+        ? prev.filter((contactId) => contactId !== id)
+        : [...prev, id]
+    );
+  };
+
+  // Simulate saving selected contacts
+  const saveSelectedContacts = () => {
+    setSaving(true);
+    setTimeout(() => {
+      Alert.alert(
+        'Success', 
+        'Contacts saved successfully',
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
+      setSaving(false);
+    }, 500);
+  };
+
+  // Enhanced search: if query contains digits, search by phone; otherwise, search by name.
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+    if (query.trim() === '') {
+      setFilteredContacts(contacts);
+    } else {
+      const normalizedQuery = query.toLowerCase().trim();
+      let filtered;
+      if (/\d/.test(query)) {
+        const normalizedDigits = query.replace(/\D/g, '');
+        filtered = contacts.filter(contact => {
+          const phoneMatch = contact.phoneNumbers && contact.phoneNumbers.some(phone =>
+            phone.number.replace(/\D/g, '').includes(normalizedDigits)
+          );
+          return phoneMatch;
+        });
+      } else {
+        filtered = contacts.filter(contact =>
+          contact.name && contact.name.toLowerCase().includes(normalizedQuery)
+        );
+      }
+      filtered.sort((a, b) => {
+        if (!a.name) return 1;
+        if (!b.name) return -1;
+        return a.name.localeCompare(b.name);
+      });
+      setFilteredContacts(filtered);
+    }
+  };
+
+  // Compute selected friends from the contacts list
+  const selectedFriends = useMemo(() => {
+    return contacts.filter(contact => selectedContacts.includes(contact.id));
+  }, [contacts, selectedContacts]);
+
+  // Compute remaining contacts (excluding selected ones)
+  const remainingContacts = useMemo(() => {
+    return filteredContacts.filter(contact => !selectedContacts.includes(contact.id));
+  }, [filteredContacts, selectedContacts]);
+
+  // Group remaining contacts by the first letter of the name
+  const groupedContacts = useMemo(() => {
+    const groups = {};
+    remainingContacts.forEach(contact => {
+      if (contact.name) {
+        const initial = contact.name.charAt(0).toUpperCase();
+        if (!groups[initial]) {
+          groups[initial] = [];
+        }
+        groups[initial].push(contact);
+      }
+    });
+    return Object.keys(groups)
+      .sort()
+      .map(key => ({ initial: key, data: groups[key] }));
+  }, [remainingContacts]);
+
+  const getContactPhoneNumber = (contact) => {
+    if (contact.phoneNumbers && contact.phoneNumbers.length > 0) {
+      return contact.phoneNumbers[0].number;
+    }
+    return '';
+  };
+
+  // Render each contact list item
+  const renderContactItem = (contact) => {
+    const isSelected = selectedContacts.includes(contact.id);
+    return (
+      <TouchableOpacity
+        key={contact.id}
+        style={styles.contactItem}
+        onPress={() => {
+          if (contact.id) {
+            toggleContactSelection(contact.id);
+          }
+        }}
+        activeOpacity={0.7}
+      >
+        <View style={styles.contactInfo}>
+          <View style={[
+              styles.contactAvatar, 
+              isSelected ? styles.selectedAvatar : null
+          ]}>
+            <Text style={styles.avatarText}>
+              {contact.name ? contact.name.charAt(0).toUpperCase() : '?'}
+            </Text>
+          </View>
+          <View style={styles.contactTextContainer}>
+            <Text style={styles.contactName} numberOfLines={1}>{contact.name}</Text>
+            <Text style={styles.contactPhone} numberOfLines={1}>
+              {getContactPhoneNumber(contact)}
+            </Text>
+          </View>
+        </View>
+        {contact.id && (
+          <View style={styles.checkboxContainer}>
+            {isSelected ? (
+              <Ionicons name="checkmark-circle" size={24} color="#FF69B4" />
+            ) : (
+              <Ionicons name="ellipse-outline" size={24} color="#aaa" />
+            )}
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
+
   return (
-    <View>
-      <Text>AddCloseFriendsScreen</Text>
-    </View>
-  )
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#333" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Add Friends</Text>
+          <Text style={styles.selectedCountText}>
+            {selectedContacts.length} selected
+          </Text>
+        </View>
+        
+        <View style={styles.searchContainer}>
+          <Ionicons name="search-outline" size={20} color="#999" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchBar}
+            placeholder="Search by name or phone number"
+            placeholderTextColor="#999"
+            value={searchQuery}
+            onChangeText={handleSearch}
+          />
+          {searchQuery !== '' && (
+            <TouchableOpacity onPress={() => handleSearch('')} style={styles.clearButton}>
+              <Ionicons name="close-circle" size={20} color="#999" />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Display selected friends on top */}
+        {selectedFriends.length > 0 && (
+          <View style={styles.selectedFriendsContainer}>
+            <Text style={styles.selectedFriendsHeader}>Selected Close Friends</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {selectedFriends.map(contact => (
+                <TouchableOpacity 
+                  key={contact.id} 
+                  style={styles.selectedFriendItem}
+                  onPress={() => toggleContactSelection(contact.id)}
+                >
+                  <View style={[styles.contactAvatar, styles.selectedAvatar]}>
+                    <Text style={styles.avatarText}>
+                      {contact.name ? contact.name.charAt(0).toUpperCase() : '?'}
+                    </Text>
+                  </View>
+                  <Text style={styles.selectedFriendName} numberOfLines={1}>
+                    {contact.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+        
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity 
+              style={styles.retryButton}
+              onPress={openContactSettings}
+            >
+              <Text style={styles.retryButtonText}>Open Settings</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#FF69B4" />
+            <Text style={styles.loadingText}>Loading contacts...</Text>
+          </View>
+        ) : (
+          <>
+            {contactsCount === 0 && (
+              <View style={styles.diagnosticContainer}>
+                <Text style={styles.diagnosticText}>
+                  Debug: Found 0 contacts. Please check permissions or create test contacts.
+                </Text>
+              </View>
+            )}
+            
+            {filteredContacts.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="people-outline" size={64} color="#ccc" />
+                <Text style={styles.emptyText}>
+                  {searchQuery ? 'No contacts match your search' : 'No contacts found'}
+                </Text>
+                <Text style={styles.emptySubtext}>
+                  {contactsCount === 0 ? 
+                    'No contacts available.' : 
+                    'Try adding some contacts.'}
+                </Text>
+                <TouchableOpacity 
+                  style={styles.refreshButton}
+                  onPress={() => {
+                    setContacts(staticContacts);
+                    setFilteredContacts(staticContacts);
+                  }}
+                >
+                  <Text style={styles.refreshButtonText}>Refresh Contacts</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                {searchQuery.trim() !== '' ? (
+                  <ScrollView style={styles.contactsList}>
+                    {filteredContacts.map(contact => renderContactItem(contact))}
+                  </ScrollView>
+                ) : (
+                  <ScrollView style={styles.contactsList}>
+                    {groupedContacts.map(group => (
+                      <View key={group.initial}>
+                        <Text style={styles.sectionHeader}>{group.initial}</Text>
+                        {group.data.map(contact => renderContactItem(contact))}
+                      </View>
+                    ))}
+                  </ScrollView>
+                )}
+              </>
+            )}
+          </>
+        )}
+        
+        <View style={styles.bottomActions}>
+          <TouchableOpacity 
+            style={[
+              styles.saveButton, 
+              (saving || selectedContacts.length === 0) ? styles.saveButtonDisabled : null
+            ]} 
+            onPress={saveSelectedContacts}
+            disabled={saving || selectedContacts.length === 0}
+          >
+            {saving ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.saveButtonText}>
+                Save {selectedContacts.length > 0 ? `(${selectedContacts.length})` : ''}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+    </SafeAreaView>
+  );
 }
 
-export default AddCloseFriendsScreen
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  selectedCountText: {
+    fontSize: 14,
+    color: '#FF69B4',
+    fontWeight: '500',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f6f6f6',
+    margin: 16,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchBar: {
+    flex: 1,
+    padding: 12,
+    fontSize: 16,
+    color: '#333',
+  },
+  clearButton: {
+    padding: 8,
+  },
+  contactsList: {
+    flex: 1,
+  },
+  sectionHeader: {
+    backgroundColor: '#f9f9f9',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#666',
+  },
+  contactItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  contactInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  contactAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#e0e0e0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  selectedAvatar: {
+    backgroundColor: '#ffd5e5',
+  },
+  avatarText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#666',
+  },
+  contactTextContainer: {
+    flex: 1,
+  },
+  contactName: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+  },
+  contactPhone: {
+    fontSize: 14,
+    color: '#777',
+    marginTop: 2,
+  },
+  checkboxContainer: {
+    padding: 4,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  emptyText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#999',
+    textAlign: 'center',
+  },
+  emptySubtext: {
+    marginTop: 8,
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+  },
+  refreshButton: {
+    backgroundColor: '#FF69B4',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 16,
+  },
+  refreshButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#999',
+  },
+  errorContainer: {
+    padding: 16,
+    backgroundColor: '#ffeeee',
+    marginHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  errorText: {
+    color: '#d32f2f',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  retryButton: {
+    backgroundColor: '#f5f5f5',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 4,
+  },
+  retryButtonText: {
+    color: '#666',
+    fontWeight: '500',
+  },
+  diagnosticContainer: {
+    padding: 8,
+    backgroundColor: '#fffde7',
+    marginHorizontal: 16,
+    marginBottom: 8,
+    borderRadius: 4,
+  },
+  diagnosticText: {
+    color: '#ff8f00',
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  bottomActions: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  saveButton: {
+    backgroundColor: '#FF69B4',
+    padding: 16,
+    alignItems: 'center',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  saveButtonDisabled: {
+    backgroundColor: '#ffb6d3',
+    opacity: 0.7,
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  selectedFriendsContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  selectedFriendsHeader: {
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 8,
+    fontWeight: 'bold',
+  },
+  selectedFriendItem: {
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  selectedFriendName: {
+    marginTop: 4,
+    fontSize: 14,
+    color: '#333',
+    maxWidth: 70,
+    textAlign: 'center',
+  },
+});
