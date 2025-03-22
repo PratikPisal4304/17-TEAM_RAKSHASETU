@@ -8,7 +8,13 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import KeyboardAwareWrapper from "./components/KeyboardAwareWrapper";
 
 import SplashScreen from "./screens/SplashScreen";
+import LoginScreen from "./screens/LoginScreen"
+import SignUpScreen from "./screens/SignUpScreen";
+import OTPVerificationScreen from "./screens/OTPVerificationScreen";
+import TellUsAboutYourselfScreen from "./screens/TellUsAboutYourselfScreen";
 import HomeScreen from "./screens/HomeScreen";
+import FakeCallScreen from "./screens/FakeCallScreen";
+import AddCloseFriendsScreen from "./screens/AddCloseFriendsScreen";
 import TrackMeScreen from "./screens/TrackMeScreen";
 import SOSScreen from "./screens/SOSScreen";
 import ProfileScreen from "./screens/ProfileScreen";
@@ -33,6 +39,10 @@ function HomeStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="HomeMain" component={HomeScreen} />
+      <Stack.Screen name="FakeCall" component={FakeCallScreen} />
+      <Stack.Screen name="AddFriends" component={AddCloseFriendsScreen} />
+      <Stack.Screen name="TrackMe" component={TrackMeScreen} />
+
     </Stack.Navigator>
   );
 }
@@ -62,7 +72,7 @@ function FloatingTabBar({ state, descriptors, navigation }) {
 
   if (currentRouteName === "Home") {
     const childRoute = getFocusedRouteNameFromRoute(state.routes[state.index]) ?? "HomeMain";
-    if (childRoute === "FakeCall" ) {
+    if (childRoute === "FakeCall" || childRoute === "AddFriends"  ) {
       hideTabBar = true;
     }
   } else if (currentRouteName === "Profile") {
@@ -159,6 +169,10 @@ export default function Routes() {
     <>
       <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Splash">
         <Stack.Screen name="Splash" component={SplashScreen} />
+        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="SignUpScreen" component={SignUpScreen} />
+        <Stack.Screen name="TellUsAboutYourselfScreen" component={TellUsAboutYourselfScreen} />
+        <Stack.Screen name="OTPVerificationScreen" component={OTPVerificationScreen} />
         <Stack.Screen name="MainTabs" component={MainTabs} />
       </Stack.Navigator>
     </>
