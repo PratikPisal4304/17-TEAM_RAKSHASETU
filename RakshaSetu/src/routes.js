@@ -12,6 +12,7 @@ import KeyboardAwareWrapper from "./components/KeyboardAwareWrapper";
 
 import AddFriendsScreen from "./screens/AddCloseFriendsScreen";
 import CommunityScreen from "./screens/CommunityScreen";
+import InAppChatScreen from "./screens/InAppChatScreen"
 import EditProfileScreen from "./screens/EditProfileScreen";
 import EmergencyHelplineScreen from "./screens/EmergencyHelplineScreen";
 import FakeCallScreen from "./screens/FakeCallScreen";
@@ -26,6 +27,9 @@ import OTPVerificationScreen from "./screens/OTPVerificationScreen";
 import ProfileScreen from "./screens/ProfileScreen";
 import SignUpScreen from "./screens/SignUpScreen";
 import SkillDevelopmentScreen from "./screens/SkillDevelopmentScreen";
+import MyLearningPath from "./screens/MyLearningPathScreen"
+import BudgetToolScreen from "./screens/BudgetToolScreen"
+import FinancialNews from "./screens/FinancialNews"
 import SOSScreen from "./screens/SOSScreen";
 import SplashScreen from "./screens/SplashScreen";
 import TellUsAboutYourselfScreen from "./screens/TellUsAboutYourselfScreen";
@@ -49,7 +53,9 @@ function HomeStack() {
       <Stack.Screen name="GenerateReport" component={GenerateReportScreen} />
       <Stack.Screen name="TrackMe" component={TrackMeScreen} />
       <Stack.Screen name="SkillDevelopment" component={SkillDevelopmentScreen} />
-
+      <Stack.Screen name="BudgetTool" component={BudgetToolScreen} />
+      <Stack.Screen name="MyLearningPath" component={MyLearningPath} />
+      <Stack.Screen name="FinancialNews" component={FinancialNews} />
       <Stack.Screen name="LiveLocationScreen" component={LiveLocationScreen} />
     </Stack.Navigator>
   );
@@ -73,6 +79,7 @@ function CommunityStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="CommunityMain" component={CommunityScreen} />
       <Stack.Screen name="GeminiChat" component={GeminiChatScreen} />
+      <Stack.Screen name="InAppChat" component={InAppChatScreen} />
     </Stack.Navigator>
   );
 }
