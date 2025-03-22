@@ -1,12 +1,200 @@
-import { View, Text } from 'react-native'
-import React from 'react'
+import React from "react";
+import { View, Text, TouchableOpacity, StyleSheet, Animated } from "react-native";
+import { getFocusedRouteNameFromRoute } from "@react-navigation/native";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { createStackNavigator } from "@react-navigation/stack";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
-const routes = () => {
+import KeyboardAwareWrapper from "./components/KeyboardAwareWrapper";
+
+import SplashScreen from "./screens/SplashScreen";
+import HomeScreen from "./screens/HomeScreen";
+import TrackMeScreen from "./screens/TrackMeScreen";
+import SOSScreen from "./screens/SOSScreen";
+import ProfileScreen from "./screens/ProfileScreen";
+
+import CommunityScreen from "./screens/CommunityScreen";
+ 
+
+const Tab = createBottomTabNavigator();
+const Stack = createStackNavigator();
+
+const withKeyboardAwareWrapper = (Component) => (props) => (
+  <KeyboardAwareWrapper>
+    <Component {...props} />
+  </KeyboardAwareWrapper>
+);
+
+/** ========== Home Stack ========== **/
+function HomeStack() {
   return (
-    <View>
-      <Text>routes</Text>
-    </View>
-  )
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="HomeMain" component={HomeScreen} />
+    </Stack.Navigator>
+  );
 }
 
-export default routes
+/** ========== Profile Stack ========== **/
+function ProfileStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="ProfileMain" component={ProfileScreen} />
+    </Stack.Navigator>
+  );
+}
+
+function CommunityStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="CommunityMain" component={CommunityScreen} />
+    </Stack.Navigator>
+  );
+}
+
+function FloatingTabBar({ state, descriptors, navigation }) {
+  const currentRouteName = state.routes[state.index].name;
+  let hideTabBar = false;
+
+  if (currentRouteName === "Home") {
+    const childRoute = getFocusedRouteNameFromRoute(state.routes[state.index]) ?? "HomeMain";
+    if (childRoute === "FakeCall" ) {
+      hideTabBar = true;
+    }
+  } else if (currentRouteName === "Profile") {
+    const childRoute = getFocusedRouteNameFromRoute(state.routes[state.index]) ?? "ProfileMain";
+    if (childRoute === "EditProfile" || childRoute === "EmergencyHelpline" ) {
+      hideTabBar = true;
+    }
+  } 
+  if (hideTabBar) {
+    return null;
+  }
+
+  return (
+    <View style={styles.floatingContainer}>
+      {state.routes.map((route, index) => {
+        const { options } = descriptors[route.key];
+        const isFocused = state.index === index;
+        const label = options.title !== undefined ? options.title : route.name;
+
+        let iconName = "";
+        let IconComponent = Ionicons;
+
+        if (route.name === "Home") {
+          iconName = isFocused ? "home" : "home-outline";
+        } else if (route.name === "Navigation") {
+          IconComponent = MaterialCommunityIcons;
+          iconName = "navigation-variant-outline";
+        } else if (route.name === "SOS") {
+          iconName = "alert-circle-outline";
+        } else if (route.name === "Community") {
+          iconName = isFocused ? "people" : "people-outline";
+        } else if (route.name === "Profile") {
+          iconName = isFocused ? "person" : "person-outline";
+        }
+
+        const onPress = () => {
+          const event = navigation.emit({
+            type: "tabPress",
+            target: route.key,
+            canPreventDefault: true,
+          });
+          if (!event.defaultPrevented) {
+            navigation.navigate(route.name);
+          }
+        };
+
+        return (
+          <TouchableOpacity
+            key={route.name}
+            accessibilityRole="button"
+            accessibilityState={isFocused ? { selected: true } : {}}
+            accessibilityLabel={options.tabBarAccessibilityLabel}
+            testID={options.tabBarTestID}
+            onPress={onPress}
+            style={styles.tabItem}
+          >
+            <Animated.View style={[styles.iconContainer, isFocused && styles.iconFocused]}>
+              <IconComponent
+                name={iconName}
+                size={24}
+                color={isFocused ? "#FF4B8C" : "#8e8e8e"}
+                style={{ transform: [{ translateY: isFocused ? -2 : 0 }] }}
+              />
+            </Animated.View>
+            <Text style={[styles.tabLabel, { color: isFocused ? "#FF4B8C" : "#8e8e8e" }]}>
+              {label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
+/** ========== Main Tabs ========== **/
+function MainTabs() {
+  return (
+    <Tab.Navigator
+      tabBar={(props) => <FloatingTabBar {...props} />}
+      screenOptions={{ headerShown: false }}
+    >
+      <Tab.Screen name="Home" component={HomeStack} />
+      <Tab.Screen name="Navigation" component={TrackMeScreen} options={{ title: "Track Me" }} />
+      <Tab.Screen name="SOS" component={SOSScreen} />
+      <Tab.Screen name="Community" component={CommunityStack} />
+      <Tab.Screen name="Profile" component={ProfileStack} />
+    </Tab.Navigator>
+  );
+}
+
+/** ========== Root Stack ========== **/
+export default function Routes() {
+  return (
+    <>
+      <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="MainTabs">
+        <Stack.Screen name="Splash" component={SplashScreen} />
+        <Stack.Screen name="MainTabs" component={MainTabs} />
+      </Stack.Navigator>
+    </>
+  );
+}
+
+/** ========== STYLES ========== **/
+const styles = StyleSheet.create({
+  floatingContainer: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+    height: 70,
+    backgroundColor: "#fff",
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: -2 },
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  tabItem: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconFocused: {
+    backgroundColor: "rgba(255, 75, 140, 0.1)",
+  },
+  tabLabel: {
+    fontSize: 11,
+    paddingBottom: 8,
+  },
+});
