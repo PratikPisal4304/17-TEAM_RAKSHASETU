@@ -1,30 +1,28 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  StyleSheet, 
-  ScrollView, 
-  ActivityIndicator, 
-  SafeAreaView,
-  StatusBar,
-  Alert,
-  Linking
-} from 'react-native';
-import * as Contacts from 'expo-contacts';
-import { 
-  collection, 
-  onSnapshot, 
-  doc, 
-  getDoc, 
-  updateDoc,
-  setDoc,
-  serverTimestamp 
-} from 'firebase/firestore';
-import { auth, db } from '../../config/firebaseConfig';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import * as Contacts from 'expo-contacts';
+import {
+  doc,
+  getDoc,
+  serverTimestamp,
+  setDoc,
+  updateDoc
+} from 'firebase/firestore';
+import React, { useCallback, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Linking,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
+import { auth, db } from '../../config/firebaseConfig';
 
 export default function AddFriendsScreen({ navigation }) {
   const [contacts, setContacts] = useState([]);
