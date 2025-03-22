@@ -1,0 +1,26 @@
+{
+      "common": {
+        "error": "Error"
+      },
+
+      "notifications": {
+        "header": "Notifications",
+        "empty": "No new notifications",
+        "clearAll": "Clear All",
+        "dismiss": "Dismiss"
+      },
+    "home": {
+      "greeting": "Hey there👋,",
+      "fakeCall": "Fake call",
+      "shareLiveLocation": "Share live\nlocation",
+      "addClosePeopleTitle": "Add Close people",
+      "addClosePeopleSubtitle": "Add close people and friends for sos",
+      "addFriendsButton": "Add friends",
+      "skillTitle": "Financial Skill Hub",
+      "skillSubtitle": "Empower Yourself: Develop Essential Financial Skills for a Brighter Future",
+      "skillProgressText": "2/5 skills completed",
+      "generateReportTitle": "Generate a Report",
+      "generateReportSubtitle": "Generate File Incident Report using AI"
+    }
+  }
+  
