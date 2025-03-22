@@ -1,5 +1,3 @@
-// TellUsAboutYourselfScreen.js
-import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
 import {
   Alert,
@@ -11,11 +9,11 @@ import {
   View
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 
 // 1) Firebase imports
-import { doc, updateDoc } from 'firebase/firestore'; // For writing to Firestore
-import { auth, db } from '../../config/firebaseConfig'; // <-- Adjust path
+import { auth, db } from '../../config/firebaseConfig';  // <-- Adjust path
+import { doc, updateDoc } from 'firebase/firestore';      // For writing to Firestore
 
 const { width, height } = Dimensions.get('window');
 const PINK = '#ff5f96';
