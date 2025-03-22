@@ -1,186 +1,240 @@
-import React from 'react';
+import React, { useState, useContext } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
-  TouchableOpacity,
-  Image,
   ScrollView,
-  SafeAreaView,
-  Animated,
+  TouchableOpacity,
+  StyleSheet,
+  Image,
+  Alert,
+  ActivityIndicator,
+  Switch,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
-export default function ProfileScreen({ navigation }) {
-  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+const languageMapping = {
+  English: 'en',
+  हिंदी: 'hi',
+  मराठी: 'mr',
+  ગુજરાતી: 'gu',
+  தமிழ்: 'ta',
+  తెలుగు: 'te',
+  ಕನ್ನಡ: 'kn',
+  ਪੰਜਾਬੀ: 'pa',
+};
 
-  React.useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 1000,
-      useNativeDriver: true,
-    }).start();
-  }, [fadeAnim]);
+const PINK = '#ff5f96';
+
+const DropdownItem = ({ title, icon, options, onOptionSelect }) => {
+  const { t, i18n } = useTranslation();
+  const [expanded, setExpanded] = useState(false);
+  const handleOptionPress = (option) => {
+    if (onOptionSelect) {
+      onOptionSelect(option);
+    } else {
+      Alert.alert(title, `${t('profile.selectedOption')} ${option}`);
+    }
+    setExpanded(false);
+  };
+  return (
+    <View style={styles.dropdownContainer}>
+      <TouchableOpacity style={styles.listItem} onPress={() => setExpanded(!expanded)}>
+        <MaterialCommunityIcons name={icon} size={24} color="#555" />
+        <Text style={styles.itemText}>{title}</Text>
+        <MaterialCommunityIcons name={expanded ? 'chevron-up' : 'chevron-down'} size={24} color="#999" />
+      </TouchableOpacity>
+      {expanded && (
+        <View style={styles.dropdownContent}>
+          {options.map((option, index) => {
+            const isCurrent = onOptionSelect && languageMapping[option] === i18n.language;
+            return (
+              <TouchableOpacity key={index} style={styles.dropdownOption} onPress={() => handleOptionPress(option)}>
+                <Text style={styles.dropdownText}>{option}</Text>
+                {isCurrent && (
+                  <MaterialCommunityIcons name="check" size={20} color={PINK} style={{ marginLeft: 10 }} />
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
+    </View>
+  );
+};
+
+const ToggleSetting = ({ title, icon, value, onValueChange }) => (
+  <View style={styles.toggleSettingContainer}>
+    <View style={styles.listItem}>
+      <MaterialCommunityIcons name={icon} size={24} color="#555" />
+      <Text style={styles.itemText}>{title}</Text>
+      <Switch
+        value={value}
+        onValueChange={onValueChange}
+        thumbColor={value ? "#ff5f96" : "#ccc"}
+        trackColor={{ false: "#eee", true: "#ffd1e1" }}
+      />
+    </View>
+  </View>
+);
+
+const ProfileScreen = ({ navigation }) => {
+  const { t, i18n } = useTranslation();
+  // Use static data since Firestore is removed.
+  const [name] = useState('Lucy');
+  const [phone] = useState('+91 12345 678910');
+  // Remove loading logic, as there's no data fetching.
+
+
+  const preferences = [
+    { title: t('profile.myPosts'), icon: 'account', screen: 'MyPosts' },
+    { title: t('profile.myReports'), icon: 'file-document', screen: 'MyReports' },
+    { title: t('profile.manageFriends'), icon: 'account-group', screen: 'ManageFriends' },
+  ];
+
+  const dropdownSettings = [
+    {
+      title: t('profile.changeLanguage'),
+      icon: 'translate',
+      options: ['English', 'हिंदी', 'मराठी', 'ગુજરાતી', 'தமிழ்', 'తెలుగు', 'ಕನ್ನಡ', 'ਪੰਜਾਬੀ'],
+      onOptionSelect: (option) => {
+        const langCode = languageMapping[option];
+        if (langCode) {
+          i18n.changeLanguage(langCode);
+        } else {
+          Alert.alert(t('common.error'), `Language code not found for ${option}`);
+        }
+      },
+    },
+    {
+      title: t('profile.notificationSettings'),
+      icon: 'bell',
+      options: [t('profile.allNotifications'), t('profile.mentionsOnly'), t('profile.muteAll')],
+    },
+  ];
+
+  const moreItems = [
+    { title: t('profile.helpLineNumbers'), icon: 'phone', screen: 'EmergencyHelpline' },
+    { title: t('profile.helpSupport'), icon: 'lifebuoy', screen: 'HelpSupport' },
+    { title: t('profile.aboutUs'), icon: 'information', screen: 'AboutUs' },
+  ];
+
+  const handleLogout = () => {
+    Alert.alert(
+      t('profile.logoutTitle'),
+      t('profile.logoutMessage'),
+      [
+        {
+          text: 'OK',
+          onPress: () => {
+            navigation.replace('Login');
+          },
+        },
+      ],
+      { cancelable: false }
+    );
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        {/* Profile Header */}
-        <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
-          <LinearGradient
-            colors={['#FF6699', '#FF3366']}
-            style={styles.gradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            <Image
-              source={{ uri: 'https://i.imgur.com/2nCt3Sbl.png' }}
-              style={styles.avatar}
-            />
-            <Text style={styles.userName}>Lucy</Text>
-            <Text style={styles.userPhone}>+91 12345 67890</Text>
-            <TouchableOpacity
-              style={styles.editIcon}
-              onPress={() => navigation.navigate('EditProfile')}
-            >
-              <Ionicons name="create-outline" size={24} color="#fff" />
-            </TouchableOpacity>
-          </LinearGradient>
-        </Animated.View>
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.headerContainer}>
+        <View style={styles.headerCurve} />
+        <Image source={{ uri: 'https://via.placeholder.com/80' }} style={styles.avatar} />
+        <Text style={styles.name}>{name}</Text>
+        <Text style={styles.phone}>{phone}</Text>
+        <TouchableOpacity style={styles.editButton} onPress={() => navigation.navigate('EditProfile')}>
+          <MaterialCommunityIcons name="account-edit" size={28} color="#000" />
+        </TouchableOpacity>
+      </View>
 
+      {/* Main Content */}
+      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         {/* Preferences Section */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Preferences</Text>
-          {[
-            { title: 'Manage Friends', icon: 'people-outline' },
-            { title: 'Change Language', icon: 'language-outline' },
-            { title: 'Notification Settings', icon: 'notifications-outline' },
-            { title: 'Customize / Themes', icon: 'color-palette-outline' },
-          ].map((item, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.listItem}
-              activeOpacity={0.7}
-            >
-              <View style={styles.listItemLeft}>
-                <Ionicons name={item.icon} size={22} color="#666" />
-                <Text style={styles.listItemText}>{item.title}</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color="#aaa" />
+        <Text style={styles.sectionTitle}>{t('profile.preferencesTitle')}</Text>
+        <View style={styles.sectionContainer}>
+          {preferences.map((item, index) => (
+            <TouchableOpacity key={index} style={styles.listItem} onPress={() => navigation.navigate(item.screen)}>
+              <MaterialCommunityIcons name={item.icon} size={24} color="#555" />
+              <Text style={styles.itemText}>{item.title}</Text>
+              <MaterialCommunityIcons name="chevron-right" size={24} color="#999" />
             </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Settings Section */}
+        <Text style={styles.sectionTitle}>{t('profile.settingsTitle')}</Text>
+        <View style={styles.sectionContainer}>
+          {dropdownSettings.map((item, index) => (
+            <DropdownItem
+              key={index}
+              title={item.title}
+              icon={item.icon}
+              options={item.options}
+              onOptionSelect={item.onOptionSelect}
+            />
           ))}
         </View>
 
         {/* More Section */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>More</Text>
-          {[
-            { title: 'Help Line Numbers', icon: 'call-outline' },
-            { title: 'Connectivity Settings', icon: 'wifi-outline' },
-            { title: 'Help & Support', icon: 'help-circle-outline' },
-            { title: 'About Us', icon: 'information-circle-outline' },
-          ].map((item, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.listItem}
-              activeOpacity={0.7}
-            >
-              <View style={styles.listItemLeft}>
-                <Ionicons name={item.icon} size={22} color="#666" />
-                <Text style={styles.listItemText}>{item.title}</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color="#aaa" />
+        <Text style={styles.sectionTitle}>{t('profile.moreTitle')}</Text>
+        <View style={styles.sectionContainer}>
+          {moreItems.map((item, index) => (
+            <TouchableOpacity key={index} style={styles.listItem} onPress={() => item.screen && navigation.navigate(item.screen)}>
+              <MaterialCommunityIcons name={item.icon} size={24} color="#555" />
+              <Text style={styles.itemText}>{item.title}</Text>
+              <MaterialCommunityIcons name="chevron-right" size={24} color="#999" />
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* Extra spacing for smooth scrolling */}
-        <View style={{ height: 50 }} />
+        {/* Logout Button */}
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutText}>{t('profile.logout')}</Text>
+        </TouchableOpacity>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
-}
+};
+
+export default ProfileScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-  },
-  scrollContainer: {
-    paddingBottom: 20,
-  },
-  header: {
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-    overflow: 'hidden',
-    marginBottom: 20,
-  },
-  gradient: {
+  container: { flex: 1, backgroundColor: '#f8f9fa' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { fontSize: 16, color: '#666', marginTop: 10 },
+  headerContainer: {
+    backgroundColor: '#ff5f96',
     alignItems: 'center',
-    paddingTop: 60,
-    paddingBottom: 40,
+    paddingTop: 50,
+    paddingBottom: 30,
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
+    position: 'relative',
   },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 3,
-    borderColor: '#fff',
-    marginBottom: 15,
-  },
-  userName: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#FFF',
-    marginBottom: 4,
-  },
-  userPhone: {
-    fontSize: 14,
-    color: '#FDEDF1',
-  },
-  editIcon: {
+  headerCurve: {
     position: 'absolute',
-    top: 30,
-    right: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 20,
-    padding: 8,
+    top: '100%',
+    width: '100%',
+    height: 30,
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
   },
-  card: {
-    backgroundColor: '#FFF',
-    borderRadius: 15,
-    paddingVertical: 12,
-    marginHorizontal: 16,
-    marginTop: 12,
-    paddingHorizontal: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#444',
-    marginBottom: 12,
-  },
-  listItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    justifyContent: 'space-between',
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#eee',
-  },
-  listItemLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  listItemText: {
-    marginLeft: 12,
-    fontSize: 16,
-    color: '#333',
-  },
+  avatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#ddd' },
+  name: { fontSize: 22, fontWeight: 'bold', color: '#fff', marginTop: 10 },
+  phone: { fontSize: 14, color: '#fff', opacity: 0.8 },
+  editButton: { position: 'absolute', right: 20, top: 70, backgroundColor: 'rgba(255,255,255,0.4)', padding: 8, borderRadius: 20 },
+  content: { flex: 1, marginTop: 20 },
+  contentContainer: { paddingBottom: 100 },
+  sectionTitle: { fontSize: 16, fontWeight: 'bold', marginLeft: 20, marginVertical: 10, color: '#555' },
+  sectionContainer: { backgroundColor: '#fff', borderRadius: 10, marginHorizontal: 15, paddingVertical: 5, elevation: 2 },
+  listItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 15, paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  itemText: { flex: 1, fontSize: 16, marginLeft: 15, color: '#333' },
+  dropdownContainer: { borderBottomWidth: 1, borderBottomColor: '#eee' },
+  dropdownContent: { backgroundColor: '#f2f2f2', paddingHorizontal: 20, paddingBottom: 10 },
+  dropdownOption: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
+  dropdownText: { fontSize: 14, color: '#333' },
+  toggleSettingContainer: { borderBottomWidth: 1, borderBottomColor: '#eee' },
+  logoutButton: { backgroundColor: '#FF4B8C', marginHorizontal: 60, marginTop: 30, marginBottom: 20, paddingVertical: 16, borderRadius: 20, alignItems: 'center', elevation: 3, shadowColor: '#000', shadowOpacity: 0.15, shadowOffset: { width: 0, height: 2 }, shadowRadius: 4 },
+  logoutText: { color: '#fff', fontSize: 17, fontWeight: '700', letterSpacing: 0.5 },
 });
