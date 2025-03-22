@@ -6,6 +6,7 @@ import React from "react";
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 import ShakeHandler from "../src/components/ShakeHandler";
+import VoiceHandler from "../src/components/VoiceHandler";
 import KeyboardAwareWrapper from "./components/KeyboardAwareWrapper";
 
 import AddFriendsScreen from "./screens/AddCloseFriendsScreen";
@@ -181,6 +182,7 @@ export default function Routes() {
     <>
       {/* Always active ShakeHandler to detect shakes and navigate to SOS */}
       <ShakeHandler />
+      <VoiceHandler />
       <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Splash">
         <Stack.Screen name="Splash" component={SplashScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
