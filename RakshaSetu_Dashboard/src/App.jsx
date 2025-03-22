@@ -1,21 +1,24 @@
-// src/App.jsx
 import React from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
+import Dashboard from "./pages/Dashboard";
 import Analytics from "./pages/Analytics";
 
 const App = () => {
   return (
     <div className="d-flex vh-100 bg-light">
-      {/* Sidebar */}
       <Sidebar />
-
-      {/* Main Content Area */}
-      <div className="d-flex flex-column flex-grow-1">
+      <div className="flex-grow-1 d-flex flex-column">
         <Header />
-        <div className="p-3 p-md-4 overflow-auto">
-          <Analytics />
-        </div>
+        <main className="p-3 p-md-4 overflow-auto">
+          <Routes>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/analytics" element={<Analytics />} />
+            {/* Redirect any unknown route to /dashboard */}
+            <Route path="*" element={<Navigate to="/dashboard" />} />
+          </Routes>
+        </main>
       </div>
     </div>
   );

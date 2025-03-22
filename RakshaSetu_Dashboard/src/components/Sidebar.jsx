@@ -1,13 +1,13 @@
-// src/components/Sidebar.jsx
 import React from "react";
+import { Link } from "react-router-dom";
 import {
   HiOutlineBellAlert,
   HiOutlineHome,
   HiOutlineUsers,
   HiOutlineMapPin,
   HiOutlineCog,
-  HiOutlineArrowRightOnRectangle, // Updated logout icon
-  HiOutlineExclamationCircle
+  HiOutlineArrowRightOnRectangle,
+  HiOutlineExclamationCircle,
 } from "react-icons/hi2";
 
 const Sidebar = () => {
@@ -26,7 +26,10 @@ const Sidebar = () => {
       {/* User Info + Emergency Alert */}
       <div className="border-bottom p-3">
         <div className="d-flex align-items-center gap-2 mb-3">
-          <div className="bg-secondary bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center text-dark fw-bold" style={{ width: "40px", height: "40px" }}>
+          <div
+            className="bg-secondary bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center text-dark fw-bold"
+            style={{ width: "40px", height: "40px" }}
+          >
             A
           </div>
           <div>
@@ -43,40 +46,58 @@ const Sidebar = () => {
       <nav className="flex-grow-1 p-3">
         <ul className="list-unstyled">
           <li>
-            <a href="#dashboard" className="d-flex align-items-center gap-2 text-dark p-2 rounded mb-1 text-decoration-none">
+            <Link
+              to="/dashboard"
+              className="d-flex align-items-center gap-2 text-dark p-2 rounded mb-1 text-decoration-none"
+            >
               <HiOutlineHome size={20} />
               Dashboard
-            </a>
+            </Link>
           </li>
           <li>
-            <a href="#emergency-alerts" className="d-flex align-items-center gap-2 text-dark p-2 rounded mb-1 text-decoration-none">
+            <Link
+              to="/analytics"
+              className="d-flex align-items-center gap-2 text-dark p-2 rounded mb-1 text-decoration-none"
+            >
               <HiOutlineBellAlert size={20} />
-              Emergency Alerts
-            </a>
+              Analytics
+            </Link>
           </li>
           <li>
-            <a href="#incidents" className="d-flex align-items-center gap-2 text-dark p-2 rounded mb-1 text-decoration-none">
+            <Link
+              to="/incidents"
+              className="d-flex align-items-center gap-2 text-dark p-2 rounded mb-1 text-decoration-none"
+            >
               <HiOutlineExclamationCircle size={20} />
               Incidents
-            </a>
+            </Link>
           </li>
           <li>
-            <a href="#users" className="d-flex align-items-center gap-2 text-dark p-2 rounded mb-1 text-decoration-none">
+            <Link
+              to="/users"
+              className="d-flex align-items-center gap-2 text-dark p-2 rounded mb-1 text-decoration-none"
+            >
               <HiOutlineUsers size={20} />
               Users
-            </a>
+            </Link>
           </li>
           <li>
-            <a href="#safe-zones" className="d-flex align-items-center gap-2 text-dark p-2 rounded mb-1 text-decoration-none">
+            <Link
+              to="/safe-zones"
+              className="d-flex align-items-center gap-2 text-dark p-2 rounded mb-1 text-decoration-none"
+            >
               <HiOutlineMapPin size={20} />
               Safe Zones
-            </a>
+            </Link>
           </li>
           <li>
-            <a href="#settings" className="d-flex align-items-center gap-2 text-dark p-2 rounded mb-1 text-decoration-none">
+            <Link
+              to="/settings"
+              className="d-flex align-items-center gap-2 text-dark p-2 rounded mb-1 text-decoration-none"
+            >
               <HiOutlineCog size={20} />
               Settings
-            </a>
+            </Link>
           </li>
         </ul>
       </nav>
