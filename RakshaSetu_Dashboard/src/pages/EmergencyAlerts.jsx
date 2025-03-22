@@ -5,7 +5,13 @@ import {
   HiOutlineMap,
   HiOutlineBars3,
 } from "react-icons/hi2";
-import { collection, doc, getDoc, onSnapshot } from "firebase/firestore";
+import {
+  collection,
+  onSnapshot,
+  query,
+  where,
+  getDocs,
+} from "firebase/firestore";
 import { db } from "../firebaseConfig"; // Adjust path as needed
 
 const EmergencyAlerts = () => {
@@ -19,7 +25,7 @@ const EmergencyAlerts = () => {
 
   // Raw alerts from Firestore
   const [alerts, setAlerts] = useState([]);
-  // Alerts merged with user data
+  // Alerts merged with user data (email/phone) by userName
   const [alertsWithUser, setAlertsWithUser] = useState([]);
 
   // 1) Listen to "sosAlerts" in real time
@@ -34,33 +40,49 @@ const EmergencyAlerts = () => {
     return () => unsubscribe();
   }, []);
 
-  // 2) For each alert, fetch user doc (if userId exists) and merge user data
+  // 2) For each alert, query "users" by userName and merge email/phone
   useEffect(() => {
     async function mergeUserData() {
       const updated = await Promise.all(
         alerts.map(async (alert) => {
-          if (!alert.userId) {
-            return { ...alert, userName: "Unknown User" };
+          // If the alert has no userName, skip the query
+          if (!alert.userName) {
+            return {
+              ...alert,
+              userEmail: "N/A",
+              userPhone: "N/A",
+            };
           }
           try {
-            const userRef = doc(db, "users", alert.userId);
-            const userSnap = await getDoc(userRef);
-            if (userSnap.exists()) {
-              const userData = userSnap.data();
-              // Add any fields you want to display below the user name:
-              // e.g. userEmail, userPhone, etc.
+            // Query users collection where name == alert.userName
+            const usersRef = collection(db, "users");
+            const qUsers = query(usersRef, where("name", "==", alert.userName));
+            const snapshot = await getDocs(qUsers);
+
+            if (!snapshot.empty) {
+              // Take the first matching user doc
+              const userDoc = snapshot.docs[0];
+              const userData = userDoc.data();
               return {
                 ...alert,
-                userName: userData.name || "Unnamed User",
                 userEmail: userData.email || "N/A",
                 userPhone: userData.phone || "N/A",
               };
             } else {
-              return { ...alert, userName: "User Not Found" };
+              // No user found with that name
+              return {
+                ...alert,
+                userEmail: "Not found",
+                userPhone: "N/A",
+              };
             }
           } catch (error) {
-            console.error("Error fetching user:", error);
-            return { ...alert, userName: "Error Fetching User" };
+            console.error("Error fetching user by name:", error);
+            return {
+              ...alert,
+              userEmail: "Error",
+              userPhone: "N/A",
+            };
           }
         })
       );
@@ -170,28 +192,24 @@ const EmergencyAlerts = () => {
               Viewing all alerts from Firestore &ldquo;sosAlerts&rdquo; collection
             </p>
 
-            {/* List of alerts */}
+            {/* List of alerts with user info */}
             {alertsWithUser.map((alert) => (
               <div
                 key={alert.id}
                 className="bg-white p-3 rounded-2 shadow-sm mb-3 d-flex flex-column flex-md-row align-items-md-center justify-content-between"
               >
                 <div className="mb-3 mb-md-0">
-                  {/* Show user name */}
-                  <h6 className="fw-semibold mb-1">{alert.userName}</h6>
-                  {/* Show user details below the name */}
+                  {/* Show userName from the alert doc */}
+                  <h6 className="fw-semibold mb-1">{alert.userName || "Unknown User"}</h6>
+                  {/* Show userEmail and userPhone below the name */}
                   <small className="text-muted">
                     Email: {alert.userEmail} | Phone: {alert.userPhone}
                   </small>
                   <br />
-                  {/* Example: If you want to show lat/long or time here, keep them */}
-                  {alert.timestamp && (
-                    <div className="text-muted mt-1">
-                      <strong>Time:</strong> {formatTimestamp(alert.timestamp)}
-                    </div>
-                  )}
+                  {/* Optional: Display other alert fields here, e.g. lat/long */}
                   {alert.latitude && alert.longitude && (
                     <small className="text-muted">
+                      <br />
                       Latitude: {alert.latitude} | Longitude: {alert.longitude}
                     </small>
                   )}
@@ -250,10 +268,7 @@ function AlertDetailsModal({ show, alert, onClose }) {
             ></button>
           </div>
           <div className="modal-body">
-            {/* Now the SOS message is only here in the modal */}
-            <p>
-              <strong>SOS Message:</strong> {alert.message || "No message provided"}
-            </p>
+            {/* Show the SOS message and user info in the modal */}
             <p>
               <strong>User Name:</strong> {alert.userName}
               <br />
@@ -262,13 +277,19 @@ function AlertDetailsModal({ show, alert, onClose }) {
               <strong>Phone:</strong> {alert.userPhone}
             </p>
             <p>
-              <strong>Latitude:</strong> {alert.latitude || "N/A"}
-              <br />
-              <strong>Longitude:</strong> {alert.longitude || "N/A"}
+              <strong>Message:</strong> {alert.message || "No message provided"}
             </p>
+            {alert.latitude && alert.longitude && (
+              <p>
+                <strong>Latitude:</strong> {alert.latitude}
+                <br />
+                <strong>Longitude:</strong> {alert.longitude}
+              </p>
+            )}
+            {/* If you have a timestamp field */}
             {alert.timestamp && (
               <p>
-                <strong>Time:</strong> {formatTimestamp(alert.timestamp)}
+                <strong>Timestamp:</strong> {String(alert.timestamp)}
               </p>
             )}
             {/* Street View URLs */}
@@ -302,16 +323,6 @@ function AlertDetailsModal({ show, alert, onClose }) {
       </div>
     </div>
   );
-}
-
-// Helper to format Firestore Timestamps or strings
-function formatTimestamp(ts) {
-  // If it's a Firestore Timestamp object
-  if (ts && ts.toDate) {
-    return ts.toDate().toLocaleString();
-  }
-  // Otherwise, assume it's a string
-  return ts;
 }
 
 export default EmergencyAlerts;
