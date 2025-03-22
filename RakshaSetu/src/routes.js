@@ -6,24 +6,22 @@ import { createStackNavigator } from "@react-navigation/stack";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
 import KeyboardAwareWrapper from "./components/KeyboardAwareWrapper";
+import ShakeHandler from "../src/components/ShakeHandler";
 
 import SplashScreen from "./screens/SplashScreen";
-import LoginScreen from "./screens/LoginScreen"
-import SignUpScreen from "./screens/SignUpScreen";
+import LoginScreen from "./screens/LoginScreen";
 import OTPVerificationScreen from "./screens/OTPVerificationScreen";
+import SignUpScreen from "./screens/SignUpScreen";
 import TellUsAboutYourselfScreen from "./screens/TellUsAboutYourselfScreen";
 import HomeScreen from "./screens/HomeScreen";
 import FakeCallScreen from "./screens/FakeCallScreen";
-import AddCloseFriendsScreen from "./screens/AddCloseFriendsScreen";
+import AddFriendsScreen from "./screens/AddCloseFriendsScreen";
 import TrackMeScreen from "./screens/TrackMeScreen";
 import SOSScreen from "./screens/SOSScreen";
 import ProfileScreen from "./screens/ProfileScreen";
 import EditProfileScreen from "./screens/EditProfileScreen";
-
 import EmergencyHelplineScreen from "./screens/EmergencyHelplineScreen";
-import CommunityScreen from "./screens/CommunityScreen";
-
- 
+import CommunityScreen from "./screens/CommunityScreen"; 
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -40,9 +38,8 @@ function HomeStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="HomeMain" component={HomeScreen} />
       <Stack.Screen name="FakeCall" component={FakeCallScreen} />
-      <Stack.Screen name="AddFriends" component={AddCloseFriendsScreen} />
+      <Stack.Screen name="AddFriends" component={AddFriendsScreen} />
       <Stack.Screen name="TrackMe" component={TrackMeScreen} />
-
     </Stack.Navigator>
   );
 }
@@ -66,21 +63,27 @@ function CommunityStack() {
   );
 }
 
+/** ========== Example Floating Tab Bar ========== **/
 function FloatingTabBar({ state, descriptors, navigation }) {
   const currentRouteName = state.routes[state.index].name;
   let hideTabBar = false;
 
   if (currentRouteName === "Home") {
     const childRoute = getFocusedRouteNameFromRoute(state.routes[state.index]) ?? "HomeMain";
-    if (childRoute === "FakeCall" || childRoute === "AddFriends"  ) {
+    if (childRoute === "FakeCall" || childRoute === "AddFriends" || childRoute === "GenerateReport" || childRoute === "MyLearningPath") {
       hideTabBar = true;
     }
   } else if (currentRouteName === "Profile") {
     const childRoute = getFocusedRouteNameFromRoute(state.routes[state.index]) ?? "ProfileMain";
-    if (childRoute === "EditProfile" || childRoute === "EmergencyHelpline" ) {
+    if (childRoute === "EditProfile" || childRoute === "EmergencyHelpline" || childRoute === "MyPosts" || childRoute === "MyReports") {
       hideTabBar = true;
     }
-  } 
+  } else if (currentRouteName === "Community") {
+    const childRoute = getFocusedRouteNameFromRoute(state.routes[state.index]) ?? "CommunityMain";
+    if (childRoute === "GeminiChat" || childRoute === "InAppChat") {
+      hideTabBar = true;
+    }
+  }
   if (hideTabBar) {
     return null;
   }
@@ -167,6 +170,8 @@ function MainTabs() {
 export default function Routes() {
   return (
     <>
+      {/* Always active ShakeHandler to detect shakes and navigate to SOS */}
+      <ShakeHandler />
       <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Splash">
         <Stack.Screen name="Splash" component={SplashScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
