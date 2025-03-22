@@ -1,105 +1,55 @@
-import React, { useState, useMemo } from "react";
-// Choose icons that actually exist in "react-icons/hi2"
+import React, { useState, useEffect, useMemo } from "react";
 import {
   HiOutlineMagnifyingGlass,
   HiOutlinePlus,
   HiOutlineAdjustmentsHorizontal,
 } from "react-icons/hi2";
-
-// Sample user data
-const INITIAL_USERS = [
-  {
-    userId: "USR1004",
-    name: "Meera Reddy",
-    dateRegistered: "10 Jan 2025",
-    email: "meera.reddy@example.com",
-    age: 27,
-    dob: "14 Feb 1998",
-    closeContacts: [
-      "Sunita Reddy (Mother +91 94567 89012)",
-      "Pradeep Reddy (Father +91 96578 90123)",
-    ],
-    location: "12.9784, 77.6408",
-    status: "active",
-  },
-  {
-    userId: "USR1002",
-    name: "Ananya Singh",
-    dateRegistered: "3 Oct 2024",
-    email: "ananya.singh@example.com",
-    age: 29,
-    dob: "22 Aug 1995",
-    closeContacts: [
-      "Vikram Singh (Brother +91 99875 67890)",
-      "Rohit Kapoor (Friend +91 98123 45678)",
-    ],
-    location: "12.9352, 77.6245",
-    status: "active",
-  },
-  {
-    userId: "USR1005",
-    name: "Divya Joshi",
-    dateRegistered: "5 Nov 2024",
-    email: "divya.joshi@example.com",
-    age: 30,
-    dob: "8 Jul 1994",
-    closeContacts: [
-      "Neha Joshi (Sister +91 90412 34567)",
-      "Rahul Joshi (Brother +91 90123 45678)",
-    ],
-    location: "12.9101, 77.6049",
-    status: "active",
-  },
-  {
-    userId: "USR1001",
-    name: "Priya Sharma",
-    dateRegistered: "15 Sept 2024",
-    email: "priya.sharma@example.com",
-    age: 32,
-    dob: "15 May 1992",
-    closeContacts: [
-      "Rajesh Sharma (Father +91 98765 43210)",
-      "Meena Sharma (Mother +91 98765 43211)",
-    ],
-    location: "12.9716, 77.5946",
-    status: "active",
-  },
-  {
-    userId: "USR1003",
-    name: "Kavita Patel",
-    dateRegistered: "22 Aug 2024",
-    email: "kavita.patel@example.com",
-    age: 34,
-    dob: "30 Nov 1989",
-    closeContacts: [
-      "Amit Patel (Father +91 87654 32109)",
-      "Deepa Gupta (Friend +91 90123 45678)",
-    ],
-    location: "13.0827, 77.5877",
-    status: "inactive",
-  },
-];
+import { collection, onSnapshot } from "firebase/firestore";
+import { db } from "../firebaseConfig"; // <-- Update the path as needed
 
 const Users = () => {
+  // State for all users from Firestore
+  const [users, setUsers] = useState([]);
+
   // States for filters
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  // Filtered user data
-  const filteredUsers = useMemo(() => {
-    return INITIAL_USERS.filter((user) => {
-      // Search filter (matches userId, name, or email)
-      const matchesSearch =
-        user.userId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase());
+  // 1) Fetch Firestore data in real time
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
+      const fetchedUsers = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setUsers(fetchedUsers);
+    });
 
-      // Status filter
-      const matchesStatus = statusFilter === "all" || user.status === statusFilter;
+    // Cleanup the listener on unmount
+    return () => unsubscribe();
+  }, []);
+
+  // 2) Apply local filters (search & status) to the fetched data
+  const filteredUsers = useMemo(() => {
+    return users.filter((user) => {
+      // Search filter (matches userId, name, or email if they exist)
+      const userId = user.userId || user.id || "";
+      const userName = user.name || "";
+      const userEmail = user.email || "";
+
+      const matchesSearch =
+        userId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        userEmail.toLowerCase().includes(searchTerm.toLowerCase());
+
+      // Status filter (if your user doc has a 'status' field)
+      const currentStatus = user.status || "unknown";
+      const matchesStatus =
+        statusFilter === "all" || currentStatus === statusFilter;
 
       return matchesSearch && matchesStatus;
     });
-  }, [searchTerm, statusFilter]);
+  }, [users, searchTerm, statusFilter]);
 
   return (
     <div className="container-fluid">
@@ -139,6 +89,7 @@ const Users = () => {
             <option value="all">All Status</option>
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
+            {/* Add more statuses if needed */}
           </select>
         </div>
 
@@ -173,58 +124,84 @@ const Users = () => {
                   <th scope="col">USER ID</th>
                   <th scope="col">NAME</th>
                   <th scope="col">EMAIL</th>
-                  <th scope="col">AGE/DOB</th>
-                  <th scope="col">CLOSE CONTACTS</th>
-                  <th scope="col">LOCATION COORDINATES</th>
+                  <th scope="col">DOB</th>
+                  <th scope="col">CONTACTS & PHONE</th>
+                  <th scope="col">LOCATION</th>
+                  <th scope="col">STATUS</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredUsers.map((user) => (
-                  <tr key={user.userId}>
-                    <td>{user.userId}</td>
-                    <td>
-                      <div className="d-flex align-items-center gap-2">
-                        {/* Circle with initials */}
-                        <div
-                          className="rounded-circle bg-secondary bg-opacity-25 d-flex align-items-center justify-content-center fw-bold"
-                          style={{ width: "32px", height: "32px" }}
-                        >
-                          {getInitials(user.name)}
+                {filteredUsers.map((user) => {
+                  // Fallbacks if certain fields don't exist in your docs
+                  const userId = user.userId || user.id;
+                  const userName = user.name || "N/A";
+                  const userEmail = user.email || "N/A";
+                  const userDob = user.dob
+                    ? formatDob(user.dob)
+                    : "N/A"; // If user.dob is an object { day, month, year }
+                  const userContacts = Array.isArray(user.closeContacts)
+                    ? user.closeContacts
+                    : [];
+                  const userPhone = user.phone || "";
+                  const userLocation = user.location || "N/A";
+                  const userStatus = user.status || "N/A";
+
+                  return (
+                    <tr key={userId}>
+                      <td>{userId}</td>
+                      <td>
+                        <div className="d-flex align-items-center gap-2">
+                          {/* Circle with initials */}
+                          <div
+                            className="rounded-circle bg-secondary bg-opacity-25 d-flex align-items-center justify-content-center fw-bold"
+                            style={{ width: "32px", height: "32px" }}
+                          >
+                            {getInitials(userName)}
+                          </div>
+                          <div>
+                            <div className="fw-semibold mb-0">{userName}</div>
+                            {user.dateRegistered && (
+                              <small className="text-muted">
+                                Registered {user.dateRegistered}
+                              </small>
+                            )}
+                          </div>
                         </div>
-                        <div>
-                          <div className="fw-semibold mb-0">{user.name}</div>
-                          <small className="text-muted">
-                            Registered {user.dateRegistered}
-                          </small>
-                        </div>
-                      </div>
-                    </td>
-                    <td>{user.email}</td>
-                    <td>
-                      {user.age} years
-                      <br />
-                      <small className="text-muted">{user.dob}</small>
-                    </td>
-                    <td>
-                      {user.closeContacts.map((contact, idx) => (
-                        <div key={idx} className="text-muted">
-                          {contact}
-                        </div>
-                      ))}
-                    </td>
-                    <td>
-                      {user.location}
-                      <br />
-                      <a href="#map" className="text-decoration-none">
-                        View on map
-                      </a>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td>{userEmail}</td>
+                      <td>{userDob}</td>
+                      <td>
+                        {userContacts.length > 0 ? (
+                          userContacts.map((contact, idx) => (
+                            <div key={idx} className="text-muted">
+                              {contact}
+                            </div>
+                          ))
+                        ) : (
+                          <span className="text-muted">N/A</span>
+                        )}
+                        {/* Show phone below the contacts */}
+                        {userPhone && (
+                          <div className="text-muted mt-1">
+                            <strong>Phone:</strong> {userPhone}
+                          </div>
+                        )}
+                      </td>
+                      <td>
+                        {userLocation}
+                        <br />
+                        <a href="#map" className="text-decoration-none">
+                          View on map
+                        </a>
+                      </td>
+                      <td>{userStatus}</td>
+                    </tr>
+                  );
+                })}
 
                 {filteredUsers.length === 0 && (
                   <tr>
-                    <td colSpan="6" className="text-center py-4">
+                    <td colSpan="7" className="text-center py-4">
                       No users found.
                     </td>
                   </tr>
@@ -245,6 +222,12 @@ function getInitials(name) {
   return (
     words[0].charAt(0).toUpperCase() + words[words.length - 1].charAt(0).toUpperCase()
   );
+}
+
+// Helper function to format DOB if it's an object like { day, month, year }
+function formatDob(dob) {
+  if (!dob.day || !dob.month || !dob.year) return "N/A";
+  return `${dob.day}-${dob.month}-${dob.year}`;
 }
 
 export default Users;
