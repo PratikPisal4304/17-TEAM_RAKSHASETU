@@ -13,7 +13,10 @@ import TrackMeScreen from "./screens/TrackMeScreen";
 import SOSScreen from "./screens/SOSScreen";
 import ProfileScreen from "./screens/ProfileScreen";
 import EditProfileScreen from "./screens/EditProfileScreen";
+
+import EmergencyHelplineScreen from "./screens/EmergencyHelplineScreen";
 import CommunityScreen from "./screens/CommunityScreen";
+
  
 
 const Tab = createBottomTabNavigator();
@@ -40,6 +43,7 @@ function ProfileStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="ProfileMain" component={ProfileScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+      <Stack.Screen name="EmergencyHelpline" component={EmergencyHelplineScreen} />
     </Stack.Navigator>
   );
 }
