@@ -7,6 +7,7 @@ import { Animated, StyleSheet, Text, TouchableOpacity, View } from "react-native
 
 import ShakeHandler from "../src/components/ShakeHandler";
 import VoiceHandler from "../src/components/VoiceHandler";
+
 import KeyboardAwareWrapper from "./components/KeyboardAwareWrapper";
 
 import AddFriendsScreen from "./screens/AddCloseFriendsScreen";
@@ -14,8 +15,10 @@ import CommunityScreen from "./screens/CommunityScreen";
 import EditProfileScreen from "./screens/EditProfileScreen";
 import EmergencyHelplineScreen from "./screens/EmergencyHelplineScreen";
 import FakeCallScreen from "./screens/FakeCallScreen";
+import GeminiChatScreen from "./screens/GeminiChatScreen";
 import GenerateReportScreen from "./screens/GenerateReportScreen";
 import HomeScreen from "./screens/HomeScreen";
+import LiveLocationScreen from "./screens/LiveLocationScreen";
 import LoginScreen from "./screens/LoginScreen";
 import MyPostsScreen from "./screens/MyPostsScreen";
 import MyReportsScreen from "./screens/MyReportsScreen";
@@ -27,8 +30,6 @@ import SOSScreen from "./screens/SOSScreen";
 import SplashScreen from "./screens/SplashScreen";
 import TellUsAboutYourselfScreen from "./screens/TellUsAboutYourselfScreen";
 import TrackMeScreen from "./screens/TrackMeScreen";
- 
-
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
@@ -48,6 +49,8 @@ function HomeStack() {
       <Stack.Screen name="GenerateReport" component={GenerateReportScreen} />
       <Stack.Screen name="TrackMe" component={TrackMeScreen} />
       <Stack.Screen name="SkillDevelopment" component={SkillDevelopmentScreen} />
+
+      <Stack.Screen name="LiveLocationScreen" component={LiveLocationScreen} />
     </Stack.Navigator>
   );
 }
@@ -69,6 +72,7 @@ function CommunityStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="CommunityMain" component={CommunityScreen} />
+      <Stack.Screen name="GeminiChat" component={GeminiChatScreen} />
     </Stack.Navigator>
   );
 }
@@ -80,7 +84,7 @@ function FloatingTabBar({ state, descriptors, navigation }) {
 
   if (currentRouteName === "Home") {
     const childRoute = getFocusedRouteNameFromRoute(state.routes[state.index]) ?? "HomeMain";
-    if (childRoute === "FakeCall" || childRoute === "AddFriends" || childRoute === "GenerateReport" || childRoute === "MyLearningPath") {
+    if (childRoute === "FakeCall" || childRoute === "AddFriends" || childRoute === "GenerateReport" || childRoute === "JobMarket" || childRoute === "BudgetTool" || childRoute === "FinancialNews" || childRoute === "MyLearningPath") {
       hideTabBar = true;
     }
   } else if (currentRouteName === "Profile") {
@@ -182,7 +186,6 @@ export default function Routes() {
     <>
       {/* Always active ShakeHandler to detect shakes and navigate to SOS */}
       <ShakeHandler />
-      <VoiceHandler />
       <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Splash">
         <Stack.Screen name="Splash" component={SplashScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
