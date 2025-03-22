@@ -83,6 +83,15 @@ const Sidebar = () => {
           </li>
           <li>
             <Link
+                to="/emergency-alerts"
+                className="d-flex align-items-center gap-2 text-dark p-2 rounded mb-1 text-decoration-none"
+            >
+                {/* Icon */}
+                Emergency Alerts
+            </Link>
+            </li>
+          <li>
+            <Link
               to="/safe-zones"
               className="d-flex align-items-center gap-2 text-dark p-2 rounded mb-1 text-decoration-none"
             >
