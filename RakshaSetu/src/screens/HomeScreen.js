@@ -45,6 +45,45 @@ const HomeScreen = ({ navigation }) => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // Example Job Insights state (replace with your real data)
+  const [jobInsights, setJobInsights] = useState({
+    totalJobs: 0,
+    trending: [],
+    salaryData: {},
+    loading: true,
+  });
+
+  const fetchJobInsights = async () => {
+    try {
+      // Replace this with a real API/Firestore call if needed
+      setJobInsights({
+        totalJobs: 1250,
+        trending: [
+          { title: "Software Engineer", growth: "+15%" },
+          { title: "Data Analyst", growth: "+12%" },
+          { title: "UX Designer", growth: "+8%" },
+        ],
+        salaryData: {
+          labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+          datasets: [
+            {
+              data: [65000, 68000, 69500, 71000, 72500, 75000],
+              color: () => PINK,
+              strokeWidth: 2,
+            },
+          ],
+        },
+        loading: false,
+      });
+    } catch (error) {
+      console.log("Error fetching job insights:", error);
+      setJobInsights((prev) => ({ ...prev, loading: false }));
+    }
+  };
+
+  useEffect(() => {
+    fetchJobInsights();
+  }, []);
 
   // Animated modal values for notifications
   const modalScale = useRef(new Animated.Value(0)).current;
@@ -430,6 +469,25 @@ const HomeScreen = ({ navigation }) => {
             <View>
               <Text style={styles.journeyTitle}>{t("home.generateReportTitle")}</Text>
               <Text style={styles.journeySubtitle}>{t("home.generateReportSubtitle")}</Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="black" />
+        </TouchableOpacity>
+
+        {/* Job Market Section */}
+        <TouchableOpacity
+          style={styles.jobMarketSection}
+          onPress={() => navigation.navigate("JobMarket")}
+        >
+          <View style={styles.jobMarketContent}>
+            <Image
+              source={require("../../assets/job.png")}
+              style={styles.jobMarketIcon}
+            />
+            <View>
+              {/* Use t('jobMarket') and t('searchJobListings') instead of hardcoded text */}
+              <Text style={styles.jobMarketTitle}>{t('home.jobMarket')}</Text>
+              <Text style={styles.jobMarketSubtitle}>{t('home.searchJobListings')}</Text>
             </View>
           </View>
           <Ionicons name="chevron-forward" size={24} color="black" />

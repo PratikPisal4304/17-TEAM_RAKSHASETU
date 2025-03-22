@@ -9,27 +9,27 @@ import ShakeHandler from "../src/components/ShakeHandler";
 import VoiceHandler from "../src/components/VoiceHandler";
 
 import KeyboardAwareWrapper from "./components/KeyboardAwareWrapper";
-
 import AddFriendsScreen from "./screens/AddCloseFriendsScreen";
+import BudgetToolScreen from "./screens/BudgetToolScreen";
 import CommunityScreen from "./screens/CommunityScreen";
-import InAppChatScreen from "./screens/InAppChatScreen"
 import EditProfileScreen from "./screens/EditProfileScreen";
 import EmergencyHelplineScreen from "./screens/EmergencyHelplineScreen";
 import FakeCallScreen from "./screens/FakeCallScreen";
+import FinancialNews from "./screens/FinancialNews";
 import GeminiChatScreen from "./screens/GeminiChatScreen";
 import GenerateReportScreen from "./screens/GenerateReportScreen";
 import HomeScreen from "./screens/HomeScreen";
+import InAppChatScreen from "./screens/InAppChatScreen";
+import JobMarketScreen from "./screens/JobMarketScreen";
 import LiveLocationScreen from "./screens/LiveLocationScreen";
 import LoginScreen from "./screens/LoginScreen";
+import MyLearningPath from "./screens/MyLearningPathScreen";
 import MyPostsScreen from "./screens/MyPostsScreen";
 import MyReportsScreen from "./screens/MyReportsScreen";
 import OTPVerificationScreen from "./screens/OTPVerificationScreen";
 import ProfileScreen from "./screens/ProfileScreen";
 import SignUpScreen from "./screens/SignUpScreen";
 import SkillDevelopmentScreen from "./screens/SkillDevelopmentScreen";
-import MyLearningPath from "./screens/MyLearningPathScreen"
-import BudgetToolScreen from "./screens/BudgetToolScreen"
-import FinancialNews from "./screens/FinancialNews"
 import SOSScreen from "./screens/SOSScreen";
 import SplashScreen from "./screens/SplashScreen";
 import TellUsAboutYourselfScreen from "./screens/TellUsAboutYourselfScreen";
@@ -57,6 +57,7 @@ function HomeStack() {
       <Stack.Screen name="MyLearningPath" component={MyLearningPath} />
       <Stack.Screen name="FinancialNews" component={FinancialNews} />
       <Stack.Screen name="LiveLocationScreen" component={LiveLocationScreen} />
+      <Stack.Screen name="JobMarket" component={JobMarketScreen} />
     </Stack.Navigator>
   );
 }
