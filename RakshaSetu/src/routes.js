@@ -186,6 +186,7 @@ export default function Routes() {
     <>
       {/* Always active ShakeHandler to detect shakes and navigate to SOS */}
       <ShakeHandler />
+      <VoiceHandler />
       <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Splash">
         <Stack.Screen name="Splash" component={SplashScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
