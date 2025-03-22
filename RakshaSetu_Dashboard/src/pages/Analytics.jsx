@@ -5,6 +5,10 @@ import CardStats from "../components/CardStats";
 import IncidentSources from "../components/IncidentSources";
 import IncidentMap from "../components/IncidentMap";
 
+// Import your newly created charts
+import SessionOverview from "../components/SessionOverview";
+import DeviceOverview from "../components/DeviceOverview";
+
 const Analytics = () => {
   return (
     <div className="container-fluid">
@@ -57,6 +61,16 @@ const Analytics = () => {
             iconColor="bg-danger text-white"
             icon="exclamation"
           />
+        </div>
+      </div>
+
+      {/* Session & Device Overviews */}
+      <div className="row g-3 mb-4">
+        <div className="col-lg-6">
+          <SessionOverview />
+        </div>
+        <div className="col-lg-6">
+          <DeviceOverview />
         </div>
       </div>
 
