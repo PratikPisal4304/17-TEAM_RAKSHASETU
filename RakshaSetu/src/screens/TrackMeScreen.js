@@ -89,13 +89,13 @@ function TrackMeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: PRIMARY_COLOR },
-  header: { paddingTop: 50, paddingBottom: 15, paddingHorizontal: 20, backgroundColor: PRIMARY_COLOR },
+  header: { paddingTop: 75, paddingBottom: 75, paddingHorizontal: 20, backgroundColor: PRIMARY_COLOR },
   headerTitle: { fontSize: 26, fontWeight: '700', color: '#fff' },
   headerSubtitle: { fontSize: 14, color: '#fff' },
   mapContainer: { flex: 1, backgroundColor: '#fff', borderTopLeftRadius: 30, borderTopRightRadius: 30, overflow: 'hidden' },
   map: { width: '100%', height: '100%' },
-  searchCard: { position: 'absolute', top: 20, alignSelf: 'center', width: width * 0.9, backgroundColor: '#fff', borderRadius: 15, padding: 10, elevation: 5, flexDirection: 'row', alignItems: 'center' },
-  searchInput: { flex: 1, height: 40, paddingHorizontal: 10, fontSize: 16, color: '#333' },
+  searchCard: { position: 'absolute', top: 130, alignSelf: 'center', width: width * 0.9, backgroundColor: '#fff', borderRadius: 15, padding: 10, elevation: 50, flexDirection: 'row', alignItems: 'center' },
+  searchInput: { flex: 1, height: 30, paddingHorizontal: 10, fontSize: 16, color: '#333' },
   toggleMapButton: { position: 'absolute', bottom: 80, left: 20, width: 50, height: 50, borderRadius: 25, backgroundColor: PRIMARY_COLOR, justifyContent: 'center', alignItems: 'center', elevation: 5 },
   recenterButton: { position: 'absolute', bottom: 80, right: 20, width: 50, height: 50, borderRadius: 25, backgroundColor: PRIMARY_COLOR, justifyContent: 'center', alignItems: 'center', elevation: 5 },
   routeButton: { position: 'absolute', bottom: 140, alignSelf: 'center', backgroundColor: '#007AFF', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 20, elevation: 5 },
