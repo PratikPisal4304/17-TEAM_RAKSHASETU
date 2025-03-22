@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   View, 
   Text, 
@@ -12,51 +12,79 @@ import {
   Alert,
   Linking
 } from 'react-native';
+import * as Contacts from 'expo-contacts';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function AddFriendsScreen({ navigation }) {
   const [contacts, setContacts] = useState([]);
   const [filteredContacts, setFilteredContacts] = useState([]);
   const [selectedContacts, setSelectedContacts] = useState([]); // will hold contact IDs
   const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [contactsCount, setContactsCount] = useState(0);
 
-  // Static contacts array to simulate data
-  const staticContacts = [
-    { id: '1', name: 'Alice Johnson', phoneNumbers: [{ number: '123-456-7890' }] },
-    { id: '2', name: 'Bob Smith', phoneNumbers: [{ number: '987-654-3210' }] },
-    { id: '3', name: 'Charlie Brown', phoneNumbers: [{ number: '555-123-4567' }] },
-    { id: '4', name: 'David Williams', phoneNumbers: [{ number: '555-987-6543' }] },
-    { id: '5', name: 'Eva Green', phoneNumbers: [{ number: '555-000-1111' }] },
-  ];
-
-  // Load static contacts on mount
-  useEffect(() => {
+  // Fetch contacts with permission handling
+  const fetchContacts = async () => {
     setLoading(true);
-    // Simulate a loading delay
-    setTimeout(() => {
-      // Sort contacts alphabetically
-      const sortedContacts = [...staticContacts].sort((a, b) => {
-        if (!a.name) return 1;
-        if (!b.name) return -1;
-        return a.name.localeCompare(b.name);
-      });
-      setContacts(sortedContacts);
-      setFilteredContacts(sortedContacts);
-      setContactsCount(sortedContacts.length);
+    setError(null);
+    try {
+      const { status } = await Contacts.requestPermissionsAsync();
+      console.log("Contacts permission status:", status);
+      
+      if (status === 'granted') {
+        console.log("Fetching contacts...");
+        const { data } = await Contacts.getContactsAsync({
+          fields: [Contacts.Fields.Name, Contacts.Fields.PhoneNumbers, Contacts.Fields.Image],
+          sort: Contacts.SortTypes.FirstName
+        });
+        
+        console.log("Total contacts retrieved:", data.length);
+        if (data.length > 0) {
+          console.log("First contact sample:", JSON.stringify(data[0], null, 2));
+        }
+        // Filter out contacts without phone numbers
+        const validContacts = data.filter(contact => 
+          contact.phoneNumbers && contact.phoneNumbers.length > 0
+        );
+        console.log("Valid contacts after filtering:", validContacts.length);
+        setContactsCount(validContacts.length);
+        // Sort valid contacts alphabetically by name
+        validContacts.sort((a, b) => {
+          if (!a.name) return 1;
+          if (!b.name) return -1;
+          return a.name.localeCompare(b.name);
+        });
+        setContacts(validContacts);
+        setFilteredContacts(validContacts);
+      } else {
+        console.log("Permission denied for contacts");
+        setError('Permission to access contacts was denied.');
+      }
+    } catch (err) {
+      console.error("Error fetching contacts:", err);
+      setError('Failed to load contacts. Please try again.');
+    } finally {
       setLoading(false);
-    }, 500);
-  }, []);
+    }
+  };
 
-  // Open device settings (if needed)
+  // Open device settings so user can grant permission
   const openContactSettings = () => {
     Linking.openSettings().catch(() =>
       Alert.alert('Error', 'Unable to open settings.')
     );
   };
+
+  // Fetch contacts when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchContacts();
+      return () => {};
+    }, [])
+  );
 
   // Toggle selection for a contact
   const toggleContactSelection = (id) => {
@@ -67,8 +95,8 @@ export default function AddFriendsScreen({ navigation }) {
     );
   };
 
-  // Simulate saving selected contacts
-  const saveSelectedContacts = () => {
+  // Simulate saving selected contacts (Firebase removed; just simulate saving)
+  const saveSelectedContacts = async () => {
     setSaving(true);
     setTimeout(() => {
       Alert.alert(
@@ -245,12 +273,21 @@ export default function AddFriendsScreen({ navigation }) {
         {error && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity 
-              style={styles.retryButton}
-              onPress={openContactSettings}
-            >
-              <Text style={styles.retryButtonText}>Open Settings</Text>
-            </TouchableOpacity>
+            {error.includes('denied') ? (
+              <TouchableOpacity 
+                style={styles.retryButton}
+                onPress={openContactSettings}
+              >
+                <Text style={styles.retryButtonText}>Open Settings</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity 
+                style={styles.retryButton}
+                onPress={fetchContacts}
+              >
+                <Text style={styles.retryButtonText}>Retry</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
         
@@ -277,15 +314,12 @@ export default function AddFriendsScreen({ navigation }) {
                 </Text>
                 <Text style={styles.emptySubtext}>
                   {contactsCount === 0 ? 
-                    'No contacts available.' : 
-                    'Try adding some contacts.'}
+                    'Make sure your contacts are accessible and you have granted permissions.' : 
+                    'Try adding some contacts to your device.'}
                 </Text>
                 <TouchableOpacity 
                   style={styles.refreshButton}
-                  onPress={() => {
-                    setContacts(staticContacts);
-                    setFilteredContacts(staticContacts);
-                  }}
+                  onPress={fetchContacts}
                 >
                   <Text style={styles.refreshButtonText}>Refresh Contacts</Text>
                 </TouchableOpacity>
@@ -503,6 +537,24 @@ const styles = StyleSheet.create({
   retryButtonText: {
     color: '#666',
     fontWeight: '500',
+  },
+  legendContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    marginBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 12,
+  },
+  legendText: {
+    marginLeft: 8,
+    color: '#666',
+    fontSize: 14,
   },
   diagnosticContainer: {
     padding: 8,
