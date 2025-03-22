@@ -1,9 +1,11 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { HiOutlineUserPlus } from "react-icons/hi2";
+import { getAuth, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 
 const Signup = () => {
   const navigate = useNavigate();
+  const auth = getAuth();
 
   // Form fields
   const [name, setName] = useState("");
@@ -11,14 +13,14 @@ const Signup = () => {
   const [password, setPassword] = useState("");
   const [confirmPass, setConfirmPass] = useState("");
 
-  // For basic client-side validation
+  // For basic client-side validation & error display
   const [error, setError] = useState("");
 
   const handleSubmit = (e) => {
     e.preventDefault();
     setError("");
 
-    // Simple client-side checks
+    // Basic validation
     if (!name || !email || !password || !confirmPass) {
       setError("Please fill in all fields.");
       return;
@@ -29,10 +31,17 @@ const Signup = () => {
       return;
     }
 
-    // In production, you'd call an API to create a new account
-    // For demonstration, assume success if all fields are filled and passwords match
-    // Then navigate to login (or automatically log the user in)
-    navigate("/login");
+    // Firebase Authentication: Create user with email and password
+    createUserWithEmailAndPassword(auth, email, password)
+      .then((userCredential) => {
+        // Optionally update the user's display name
+        updateProfile(userCredential.user, { displayName: name });
+        // Navigate to login or directly to dashboard (if auto login is desired)
+        navigate("/login");
+      })
+      .catch((err) => {
+        setError(err.message);
+      });
   };
 
   return (
@@ -40,10 +49,7 @@ const Signup = () => {
       className="d-flex justify-content-center align-items-center bg-light"
       style={{ minHeight: "100vh" }}
     >
-      <div
-        className="card shadow-sm p-4"
-        style={{ maxWidth: "400px", width: "100%" }}
-      >
+      <div className="card shadow-sm p-4" style={{ maxWidth: "400px", width: "100%" }}>
         <div className="text-center mb-4">
           <div className="mb-3">
             {/* Logo / Icon */}
@@ -54,7 +60,7 @@ const Signup = () => {
               <HiOutlineUserPlus size={24} />
             </span>
           </div>
-          <h3 className="mb-1">SafeGuard</h3>
+          <h3 className="mb-1">RakshaSetu</h3>
           <p className="text-muted mb-0">Sign up for an admin account</p>
         </div>
 

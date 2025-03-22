@@ -1,5 +1,5 @@
-import React from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
 import {
   HiOutlineBellAlert,
   HiOutlineHome,
@@ -8,120 +8,116 @@ import {
   HiOutlineCog,
   HiOutlineArrowRightOnRectangle,
   HiOutlineExclamationCircle,
+  HiOutlineChartBar,
 } from "react-icons/hi2";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
-const Sidebar = () => {
+const Sidebar = ({ isDrawerActive, onClose }) => {
+  const navigate = useNavigate();
+  const auth = getAuth();
+
+  // State for current user from Firebase Auth
+  const [user, setUser] = useState(null);
+
+  // Listen for auth state changes
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, [auth]);
+
+  const handleLogout = () => {
+    // Add your logout logic here (e.g., sign out using Firebase Auth)
+    auth.signOut().then(() => {
+      navigate("/login");
+    });
+  };
+
+  const navLinks = [
+    { name: "Dashboard", path: "/dashboard", icon: HiOutlineHome },
+    { name: "Emergency Alerts", path: "/emergency-alerts", icon: HiOutlineBellAlert },
+    { name: "FIR", path: "/FIR", icon: HiOutlineExclamationCircle },
+    { name: "Users", path: "/users", icon: HiOutlineUsers },
+    // { name: "Safe Zones", path: "/safe-zones", icon: HiOutlineMapPin },
+    { name: "Analytics", path: "/analytics", icon: HiOutlineChartBar },
+    { name: "Settings", path: "/Settings", icon: HiOutlineCog },
+  ];
+
   return (
-    <aside className="d-flex flex-column bg-white border-end" style={{ width: "250px" }}>
-      {/* Brand / Logo */}
-      <div className="border-bottom p-3">
-        <h1 className="h5 m-0 d-flex align-items-center gap-2">
-          <span className="text-danger">
-            <HiOutlineExclamationCircle size={24} />
-          </span>
-         RakshaSetu
-        </h1>
+    <aside
+      className="d-flex flex-column bg-white border-end"
+      style={{
+        width: "250px",
+        height: "100vh",
+        position: "fixed",
+        top: 0,
+        left: 0,
+        zIndex: 999,
+        transition: "transform 0.3s ease",
+        transform: isDrawerActive ? "translateX(0)" : "translateX(-100%)",
+      }}
+    >
+      {/* Brand Identity */}
+      <div className="border-bottom p-3 d-flex align-items-center gap-2">
+        <span className="text-danger">
+          <HiOutlineExclamationCircle size={24} />
+        </span>
+        <h1 className="h5 m-0">RakshaSetu</h1>
       </div>
 
-      {/* User Info + Emergency Alert */}
+      {/* User Section */}
       <div className="border-bottom p-3">
-        <div className="d-flex align-items-center gap-2 mb-3">
+        <div className="d-flex align-items-center gap-2">
           <div
             className="bg-secondary bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center text-dark fw-bold"
             style={{ width: "40px", height: "40px" }}
           >
-            A
+            {user && user.displayName ? user.displayName.charAt(0).toUpperCase() : "A"}
           </div>
           <div>
-            <p className="m-0 fw-semibold">Admin</p>
-            <small className="text-muted">admin@safeguard.com</small>
+            <p className="m-0 fw-semibold">
+              {user && user.displayName ? user.displayName : "Admin"}
+            </p>
+            <small className="text-muted">
+              {user && user.email ? user.email : "admin@safeguard.com"}
+            </small>
           </div>
         </div>
-        <button className="btn btn-danger w-100 fw-semibold">
-          Emergency Alert
-        </button>
+        {/* You can add additional user info or controls here if needed */}
       </div>
 
       {/* Navigation Links */}
-      <nav className="flex-grow-1 p-3">
-        <ul className="list-unstyled">
-          <li>
-            <Link
-              to="/dashboard"
-              className="d-flex align-items-center gap-2 text-dark p-2 rounded mb-1 text-decoration-none"
-            >
-              <HiOutlineHome size={20} />
-              Dashboard
-            </Link>
-          </li>
-          <li>
-            <Link
-              to="/analytics"
-              className="d-flex align-items-center gap-2 text-dark p-2 rounded mb-1 text-decoration-none"
-            >
-              <HiOutlineBellAlert size={20} />
-              Analytics
-            </Link>
-          </li>
-          <li>
-            <Link
-              to="/incidents"
-              className="d-flex align-items-center gap-2 text-dark p-2 rounded mb-1 text-decoration-none"
-            >
-              <HiOutlineExclamationCircle size={20} />
-              Incidents
-            </Link>
-          </li>
-          <li>
-            <Link
-              to="/users"
-              className="d-flex align-items-center gap-2 text-dark p-2 rounded mb-1 text-decoration-none"
-            >
-              <HiOutlineUsers size={20} />
-              Users
-            </Link>
-          </li>
-          <li>
-            <Link
-                to="/emergency-alerts"
-                className="d-flex align-items-center gap-2 text-dark p-2 rounded mb-1 text-decoration-none"
-            >
-                {/* Icon */}
-                Emergency Alerts
-            </Link>
+      <nav className="flex-grow-1 overflow-auto p-3">
+        <ul className="nav flex-column gap-1">
+          {navLinks.map((link) => (
+            <li key={link.name} className="nav-item">
+              <NavLink
+                to={link.path}
+                onClick={onClose} // Close drawer on navigation
+                className={({ isActive }) =>
+                  `nav-link d-flex align-items-center gap-2 rounded ${
+                    isActive
+                      ? "bg-danger bg-opacity-10 text-danger fw-semibold"
+                      : "text-dark"
+                  }`
+                }
+              >
+                <link.icon size={20} />
+                {link.name}
+              </NavLink>
             </li>
-          <li>
-            <Link
-              to="/safe-zones"
-              className="d-flex align-items-center gap-2 text-dark p-2 rounded mb-1 text-decoration-none"
-            >
-              <HiOutlineMapPin size={20} />
-              Safe Zones
-            </Link>
-          </li>
-          <li>
-            <Link to="/fir" className="text-decoration-none">
-                FIR Dashboard
-            </Link>
-            </li>
-
-          <li>
-            <Link
-              to="/settings"
-              className="d-flex align-items-center gap-2 text-dark p-2 rounded mb-1 text-decoration-none"
-            >
-              <HiOutlineCog size={20} />
-              Settings
-            </Link>
-          </li>
+          ))}
         </ul>
       </nav>
 
-      {/* Logout Button */}
-      <div className="border-top p-3">
-        <button className="btn btn-outline-secondary w-100 d-flex align-items-center gap-2 justify-content-center">
-          <HiOutlineArrowRightOnRectangle size={20} />
-          Logout
+      {/* Logout Section */}
+      <div className="border-top p-3 mt-auto">
+        <button
+          className="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center gap-2"
+          onClick={handleLogout}
+        >
+          <HiOutlineArrowRightOnRectangle size={20} /> Logout
         </button>
       </div>
     </aside>

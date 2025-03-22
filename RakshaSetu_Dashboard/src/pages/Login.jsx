@@ -1,51 +1,57 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { HiOutlineLockClosed } from "react-icons/hi2";
+import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 
 const Login = () => {
   const navigate = useNavigate();
+  const auth = getAuth();
 
   // Form state
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // For basic client-side validation
+  // For basic client-side validation & error display
   const [error, setError] = useState("");
 
   const handleSubmit = (e) => {
     e.preventDefault();
     setError("");
 
-    // Simple client-side checks
+    // Simple client-side validation
     if (!email || !password) {
       setError("Please fill in all fields.");
       return;
     }
 
-    // For demonstration, let's assume a "valid" login is a specific user/password
-    // In production, you'd call an API to validate credentials
-    if (email === "admin@safeguard.com" && password === "password") {
-      // Optionally store token/credentials in localStorage or context
-      // localStorage.setItem("authToken", "some_token_here");
-
-      // Redirect to /dashboard
-      navigate("/dashboard");
-    } else {
-      setError("Invalid email or password. Try again.");
-    }
+    // Firebase Authentication: sign in with email and password
+    signInWithEmailAndPassword(auth, email, password)
+      .then((userCredential) => {
+        // Successful sign in
+        navigate("/dashboard");
+      })
+      .catch((err) => {
+        setError(err.message);
+      });
   };
 
   return (
-    <div className="d-flex justify-content-center align-items-center bg-light" style={{ minHeight: "100vh" }}>
+    <div
+      className="d-flex justify-content-center align-items-center bg-light"
+      style={{ minHeight: "100vh" }}
+    >
       <div className="card shadow-sm p-4" style={{ maxWidth: "400px", width: "100%" }}>
         <div className="text-center mb-4">
           <div className="mb-3">
             {/* Logo / Icon */}
-            <span className="d-inline-flex align-items-center justify-content-center bg-danger text-white rounded-circle" style={{ width: "50px", height: "50px" }}>
+            <span
+              className="d-inline-flex align-items-center justify-content-center bg-danger text-white rounded-circle"
+              style={{ width: "50px", height: "50px" }}
+            >
               <HiOutlineLockClosed size={24} />
             </span>
           </div>
-          <h3 className="mb-1">SafeGuard</h3>
+          <h3 className="mb-1">RakshaSetu</h3>
           <p className="text-muted mb-0">Sign in to the admin dashboard</p>
         </div>
 
@@ -96,15 +102,15 @@ const Login = () => {
           <button type="submit" className="btn btn-danger w-100 fw-semibold">
             Login
           </button>
-          <div className="text-center">
-            <small className="text-muted">
-            Don’t have an account?{" "}
-            <Link to="/signup" className="text-decoration-none">
-                Sign up
-            </Link>
-            </small>
-        </div>
         </form>
+
+        {/* Signup Button */}
+        <div className="text-center mt-3">
+          <span className="me-2">Don't have an account?</span>
+          <Link to="/signup" className="btn btn-outline-secondary">
+            Sign Up
+          </Link>
+        </div>
       </div>
     </div>
   );
