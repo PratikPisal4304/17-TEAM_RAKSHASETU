@@ -1,8 +1,6 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import axios from 'axios';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
-    ActivityIndicator,
     Alert,
     Animated,
     Image,
@@ -21,21 +19,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const PINK = '#ff5f96';
 const CARD_RADIUS = 10;
 
-// Replace with your actual API base URL
-const API_URL = 'https://gnews.io/api/v4/search?q=women%20rights&lang=en&token=46c36e6121dc72392fa3fa7a6277b1e9';
-
 // Helper function to format Date objects into local date strings.
 const formatTimestamp = (timestamp) => {
-  if (!timestamp) return '';
+  if (!timestamp) return "";
   return new Date(timestamp).toLocaleDateString();
 };
 
-/**
- * PostCard Component
- * - Renders a post from your API data.
- * - Double tap to like with an animation.
- * - Has icons for like, comment, share, delete.
- */
+
 const PostCard = ({
   post,
   onLikeToggle,
@@ -46,31 +36,27 @@ const PostCard = ({
   const lastTapRef = useRef(0);
   const animation = useRef(new Animated.Value(0)).current;
 
-  // For demonstration, we track local like state to animate quickly
-  const [isLiked, setIsLiked] = useState(post.isLiked || false);
-  const [likeCount, setLikeCount] = useState(post.likes || 0);
+ 
+  const [isLiked, setIsLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(post.likedBy ? post.likedBy.length : 0);
 
-  // Handle double-tap to like
   const handleCardTap = () => {
     const now = Date.now();
     const DOUBLE_PRESS_DELAY = 300;
     if (lastTapRef.current && now - lastTapRef.current < DOUBLE_PRESS_DELAY) {
       // Double tap detected: toggle like
-      toggleLike();
+      setIsLiked((prev) => {
+        const newVal = !prev;
+        setLikeCount((prevCount) => (newVal ? prevCount + 1 : prevCount - 1));
+        onLikeToggle(post, newVal);
+        if (newVal) triggerLikeAnimation();
+        return newVal;
+      });
     } else {
       lastTapRef.current = now;
     }
   };
 
-  const toggleLike = () => {
-    const newVal = !isLiked;
-    setIsLiked(newVal);
-    setLikeCount((prev) => (newVal ? prev + 1 : prev - 1));
-    onLikeToggle(post, newVal);
-    if (newVal) triggerLikeAnimation();
-  };
-
-  // Like animation
   const triggerLikeAnimation = () => {
     animation.setValue(0);
     Animated.sequence([
@@ -95,51 +81,47 @@ const PostCard = ({
   return (
     <TouchableWithoutFeedback onPress={handleCardTap}>
       <View style={styles.postCard}>
-        {/* Post Header */}
         <View style={styles.postHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
             <Image
-              source={{ uri: post.userAvatar || 'https://via.placeholder.com/40' }}
+              source={{ uri: "https://via.placeholder.com/40" }}
               style={styles.userAvatar}
             />
             <View style={{ marginLeft: 10 }}>
-              <Text style={styles.userName}>
-                {post.userName || 'Unknown User'}
-              </Text>
+              <Text style={styles.userName}>{post.userName || "Unknown User"}</Text>
               <Text style={styles.dateText}>
                 Posted on: {formatTimestamp(post.createdAt)}
               </Text>
             </View>
           </View>
-          {/* Delete icon if allowed */}
           {post.canDelete && (
             <TouchableOpacity onPress={() => onDeletePost(post)}>
               <Ionicons name="trash" size={20} color="red" />
             </TouchableOpacity>
           )}
         </View>
-
-        {/* Post Title & Content */}
         <Text style={styles.postTitle}>{post.title}</Text>
         <Text style={styles.postContent}>{post.content}</Text>
-
-        {/* Post Image */}
         {post.imageUrl ? (
           <Image source={{ uri: post.imageUrl }} style={styles.postImage} />
         ) : null}
-
-        {/* Action Row */}
         <View style={styles.actionRow}>
-          <TouchableOpacity style={styles.actionButton} onPress={toggleLike}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => {
+              setIsLiked(!isLiked);
+              setLikeCount(isLiked ? likeCount - 1 : likeCount + 1);
+              onLikeToggle(post, !isLiked);
+            }}
+          >
             <Ionicons
-              name={isLiked ? 'heart' : 'heart-outline'}
+              name={isLiked ? "heart" : "heart-outline"}
               size={20}
-              color={isLiked ? 'red' : '#666'}
+              color={isLiked ? "red" : "#666"}
               style={{ marginRight: 5 }}
             />
-            <Text style={styles.actionButtonText}>{likeCount}</Text>
+            <Text style={styles.actionButtonText}>{likeCount || ""}</Text>
           </TouchableOpacity>
-
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => onCommentPost(post)}
@@ -151,10 +133,9 @@ const PostCard = ({
               style={{ marginRight: 5 }}
             />
             <Text style={styles.actionButtonText}>
-              {post.commentCount || 0}
+              {post.commentCount ? post.commentCount : 0}
             </Text>
           </TouchableOpacity>
-
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => onSharePost(post)}
@@ -168,7 +149,6 @@ const PostCard = ({
             <Text style={styles.actionButtonText}>Share</Text>
           </TouchableOpacity>
         </View>
-
         {/* Animated heart overlay */}
         <Animated.View
           style={[
@@ -185,77 +165,74 @@ const PostCard = ({
 
 export default function CommunityScreen() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
 
-  // For search suggestions
+ 
+  const staticPosts = [
+    {
+      id: '1',
+      userId: 'user1',
+      userName: 'Alice',
+      title: 'Welcome to the community!',
+      content: 'This is a demo post.',
+      imageUrl: 'https://via.placeholder.com/300',
+      likedBy: [],
+      commentCount: 2,
+      createdAt: Date.now() - 86400000,
+      canDelete: true,
+    },
+    {
+      id: '2',
+      userId: 'user2',
+      userName: 'Bob',
+      title: 'Hello World',
+      content: 'Just sharing some thoughts.',
+      imageUrl: null,
+      likedBy: [],
+      commentCount: 0,
+      createdAt: Date.now() - 43200000,
+      canDelete: false,
+    },
+  ];
+
+  const [posts] = useState(staticPosts);
+
+  // For search suggestions.
+  const filteredPosts =
+    searchTerm.trim() === ''
+      ? posts
+      : posts.filter(
+          (post) =>
+            post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            post.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (post.userName &&
+              post.userName.toLowerCase().includes(searchTerm.toLowerCase()))
+        );
   const suggestionsSet = new Set();
-
-  // ------------------------
-  //  API CALLS
-  // ------------------------
-  useEffect(() => {
-    fetchPosts();
-  }, []);
-
-  const fetchPosts = async () => {
-    try {
-      setLoading(true);
-      const res = await axios.get(`${API_URL}/posts`);
-      // Expecting each post object to have:
-      // { id, userName, title, content, imageUrl, createdAt, isLiked, likes, commentCount, canDelete, userAvatar }
-      setPosts(res.data || []);
-    } catch (error) {
-      Alert.alert('Error', 'Error fetching posts from server.');
-      console.error(error);
-    } finally {
-      setLoading(false);
+  filteredPosts.forEach((post) => {
+    if (post.title.toLowerCase().includes(searchTerm.toLowerCase())) {
+      suggestionsSet.add(post.title);
     }
+    if (
+      post.userName &&
+      post.userName.toLowerCase().includes(searchTerm.toLowerCase())
+    ) {
+      suggestionsSet.add(post.userName);
+    }
+  });
+  const suggestions = Array.from(suggestionsSet);
+
+  const handleSearchSubmit = () => {
+    Alert.alert('Search Submitted', searchTerm);
   };
 
-  // Toggle Like on the server
-  const handleLikeToggle = async (post, isLiked) => {
-    try {
-      await axios.post(`${API_URL}/posts/${post.id}/like`, { isLiked });
-      // Re-fetch or optimistically update local state
-      fetchPosts();
-    } catch (error) {
-      Alert.alert('Error', 'Unable to like post.');
-      console.error(error);
-    }
-  };
-
-  // Delete Post on the server
-  const handleDeletePost = async (post) => {
+ 
+  const handleLikeToggle = (post, isLiked) => {
     Alert.alert(
-      'Delete Post',
-      `Are you sure you want to delete "${post.title}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await axios.delete(`${API_URL}/posts/${post.id}`);
-              fetchPosts();
-            } catch (error) {
-              Alert.alert('Error', 'Unable to delete post.');
-              console.error(error);
-            }
-          },
-        },
-      ]
+      'Like Toggled',
+      `Post "${post.title}" is now ${isLiked ? 'liked' : 'unliked'}.`
     );
   };
 
-  // Comment on a post
-  const handleCommentPost = (post) => {
-    Alert.alert('Comment', `Open comment modal for post "${post.title}".`);
-    // You could navigate to a comment screen or show a comment modal.
-  };
-
-  // Share a post
   const handleSharePost = async (post) => {
     try {
       await Share.share({
@@ -266,38 +243,17 @@ export default function CommunityScreen() {
     }
   };
 
-  // ------------------------
-  //  SEARCH / FILTER
-  // ------------------------
-  const filteredPosts = posts.filter((p) => {
-    const lowerSearch = searchTerm.toLowerCase();
-    return (
-      p.title?.toLowerCase().includes(lowerSearch) ||
-      p.content?.toLowerCase().includes(lowerSearch) ||
-      p.userName?.toLowerCase().includes(lowerSearch)
-    );
-  });
-
-  filteredPosts.forEach((post) => {
-    // Build suggestions
-    if (post.title?.toLowerCase().includes(searchTerm.toLowerCase())) {
-      suggestionsSet.add(post.title);
-    }
-    if (post.userName?.toLowerCase().includes(searchTerm.toLowerCase())) {
-      suggestionsSet.add(post.userName);
-    }
-  });
-  const suggestions = Array.from(suggestionsSet);
-
-  // Called when user presses search icon or hits enter
-  const handleSearchSubmit = () => {
-    // If you want to do a server-side search, do it here
-    Alert.alert('Search Submitted', searchTerm);
+  const handleCommentPost = (post) => {
+    Alert.alert('Comment', `Open comment modal for post "${post.title}".`);
   };
 
-  // ------------------------
-  //  RENDER
-  // ------------------------
+  const handleDeletePost = (post) => {
+    Alert.alert(
+      'Delete Post',
+      `Delete post "${post.title}"? (Static demo, no deletion occurs.)`
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
@@ -341,45 +297,26 @@ export default function CommunityScreen() {
             <Text style={styles.sectionTitle}>Recent Posts</Text>
             <TouchableOpacity
               style={styles.createPostButton}
-              onPress={() => Alert.alert('Create Post', 'Open create post modal (use an API call).')}
+              onPress={() =>
+                Alert.alert('Create Post', 'Open create post modal (static demo).')
+              }
             >
               <Ionicons name="add-circle-outline" size={18} color={PINK} style={{ marginRight: 4 }} />
               <Text style={styles.createPostButtonText}>Create Post</Text>
             </TouchableOpacity>
           </View>
-
-          {/* Loading Indicator */}
-          {loading ? (
-            <ActivityIndicator size="large" color={PINK} style={{ marginTop: 20 }} />
-          ) : (
-            filteredPosts.map((post) => (
-              <PostCard
-                key={post.id}
-                post={post}
-                onLikeToggle={handleLikeToggle}
-                onDeletePost={handleDeletePost}
-                onCommentPost={handleCommentPost}
-                onSharePost={handleSharePost}
-              />
-            ))
-          )}
+          {filteredPosts.map((post) => (
+            <PostCard
+              key={post.id}
+              post={post}
+              onLikeToggle={handleLikeToggle}
+              onDeletePost={handleDeletePost}
+              onCommentPost={handleCommentPost}
+              onSharePost={handleSharePost}
+            />
+          ))}
         </View>
       </KeyboardAwareScrollView>
-
-      {/* Floating Buttons */}
-      <TouchableOpacity
-        style={styles.floatingButton}
-        onPress={() => Alert.alert('GeminiChat', 'Navigate to GeminiChat screen.')}
-      >
-        <Ionicons name="sparkles" size={28} color="#fff" />
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.chatfloatingButton}
-        onPress={() => Alert.alert('InAppChat', 'Navigate to InAppChat screen.')}
-      >
-        <Ionicons name="chatbubbles-sharp" size={28} color="#fff" />
-      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -446,7 +383,6 @@ const styles = StyleSheet.create({
     borderColor: PINK,
   },
   createPostButtonText: { color: PINK, fontWeight: '600' },
-  // PostCard styles
   postCard: {
     backgroundColor: '#fff',
     borderRadius: CARD_RADIUS,
@@ -468,8 +404,8 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: PINK,
   },
-  userName: { fontSize: 15, fontWeight: '600', color: '#333' },
-  dateText: { fontSize: 12, color: '#999', marginTop: 4 },
+  userName: { fontSize: 15, fontWeight: '600', color: '#333', marginLeft: 10 },
+  dateText: { fontSize: 12, color: '#999', marginTop: 4, marginLeft: 10 },
   postTitle: {
     fontSize: 18,
     fontWeight: '700',
@@ -502,44 +438,75 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   actionButtonText: { fontSize: 14, color: '#666' },
-  heartOverlay: {
-    position: 'absolute',
-    top: '40%',
-    left: '40%',
-  },
-  // Floating buttons
-  floatingButton: {
-    position: 'absolute',
-    bottom: 150,
-    right: 20,
-    backgroundColor: PINK,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+  heartOverlay: { position: 'absolute', top: '40%', left: '40%' },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.3)',
     justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    zIndex: 100,
+    padding: 20,
   },
-  chatfloatingButton: {
-    position: 'absolute',
-    bottom: 80,
-    right: 20,
-    backgroundColor: PINK,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    zIndex: 100,
+  modalContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 20,
+    maxHeight: '90%',
+    alignSelf: 'center',
+    width: '100%',
   },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 15,
+    color: '#333',
+    textAlign: 'center',
+  },
+  modalInput: {
+    backgroundColor: '#f8f8f8',
+    borderRadius: 8,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: '#333',
+    borderWidth: 1,
+    borderColor: '#eee',
+    marginBottom: 10,
+  },
+  previewImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+    resizeMode: 'cover',
+    marginBottom: 10,
+  },
+  pickImageButton: {
+    backgroundColor: '#999',
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 8,
+    marginBottom: 20,
+  },
+  pickImageText: { color: '#fff', fontWeight: '600' },
+  modalActions: { flexDirection: 'row', justifyContent: 'flex-end' },
+  modalButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginLeft: 10,
+  },
+  modalButtonText: { color: '#fff', fontWeight: '600' },
+  commentItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    marginBottom: 4,
+  },
+  commentUser: { fontWeight: 'bold', color: '#333' },
+  commentText: { flex: 1, marginLeft: 10, color: '#555' },
+  commentDate: { fontSize: 12, color: '#999', marginTop: 4 },
 });
