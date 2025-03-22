@@ -48,7 +48,8 @@
     "react-native-keyboard-aware-scroll-view": "^0.9.5",
     "react-native-maps": "^1.20.1",
     "react-native-reanimated": "~3.16.1",
-    "react-native-webview": "^13.13.4"
+    "react-native-webview": "^13.13.4",
+    "react-native-youtube-iframe": "^2.3.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"
