@@ -5,7 +5,7 @@ import {
   HiOutlineAdjustmentsHorizontal,
 } from "react-icons/hi2";
 import { collection, onSnapshot } from "firebase/firestore";
-import { db } from "../firebaseConfig"; // <-- Update the path as needed
+import { db } from "../firebaseConfig"; // Adjust path as needed
 
 const Users = () => {
   // State for all users from Firestore
@@ -15,7 +15,7 @@ const Users = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  // 1) Fetch Firestore data in real time
+  // Fetch Firestore data in real time
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
       const fetchedUsers = snapshot.docs.map((doc) => ({
@@ -25,14 +25,12 @@ const Users = () => {
       setUsers(fetchedUsers);
     });
 
-    // Cleanup the listener on unmount
     return () => unsubscribe();
   }, []);
 
-  // 2) Apply local filters (search & status) to the fetched data
+  // Apply local filters (search & status) to the fetched data
   const filteredUsers = useMemo(() => {
     return users.filter((user) => {
-      // Search filter (matches userId, name, or email if they exist)
       const userId = user.userId || user.id || "";
       const userName = user.name || "";
       const userEmail = user.email || "";
@@ -42,7 +40,6 @@ const Users = () => {
         userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         userEmail.toLowerCase().includes(searchTerm.toLowerCase());
 
-      // Status filter (if your user doc has a 'status' field)
       const currentStatus = user.status || "unknown";
       const matchesStatus =
         statusFilter === "all" || currentStatus === statusFilter;
@@ -89,7 +86,6 @@ const Users = () => {
             <option value="all">All Status</option>
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
-            {/* Add more statuses if needed */}
           </select>
         </div>
 
@@ -125,7 +121,7 @@ const Users = () => {
                   <th scope="col">NAME</th>
                   <th scope="col">EMAIL</th>
                   <th scope="col">DOB</th>
-                  <th scope="col">CONTACTS & PHONE</th>
+                  <th scope="col">PHONE</th>
                   <th scope="col">LOCATION</th>
                   <th scope="col">STATUS</th>
                 </tr>
@@ -136,13 +132,8 @@ const Users = () => {
                   const userId = user.userId || user.id;
                   const userName = user.name || "N/A";
                   const userEmail = user.email || "N/A";
-                  const userDob = user.dob
-                    ? formatDob(user.dob)
-                    : "N/A"; // If user.dob is an object { day, month, year }
-                  const userContacts = Array.isArray(user.closeContacts)
-                    ? user.closeContacts
-                    : [];
-                  const userPhone = user.phone || "";
+                  const userDob = user.dob ? formatDob(user.dob) : "N/A";
+                  const userPhone = user.phone || "N/A";
                   const userLocation = user.location || "N/A";
                   const userStatus = user.status || "N/A";
 
@@ -170,23 +161,7 @@ const Users = () => {
                       </td>
                       <td>{userEmail}</td>
                       <td>{userDob}</td>
-                      <td>
-                        {userContacts.length > 0 ? (
-                          userContacts.map((contact, idx) => (
-                            <div key={idx} className="text-muted">
-                              {contact}
-                            </div>
-                          ))
-                        ) : (
-                          <span className="text-muted">N/A</span>
-                        )}
-                        {/* Show phone below the contacts */}
-                        {userPhone && (
-                          <div className="text-muted mt-1">
-                            <strong>Phone:</strong> {userPhone}
-                          </div>
-                        )}
-                      </td>
+                      <td>{userPhone}</td>
                       <td>
                         {userLocation}
                         <br />
