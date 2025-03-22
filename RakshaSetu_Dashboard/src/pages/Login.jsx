@@ -96,6 +96,14 @@ const Login = () => {
           <button type="submit" className="btn btn-danger w-100 fw-semibold">
             Login
           </button>
+          <div className="text-center">
+            <small className="text-muted">
+            Don’t have an account?{" "}
+            <Link to="/signup" className="text-decoration-none">
+                Sign up
+            </Link>
+            </small>
+        </div>
         </form>
       </div>
     </div>
