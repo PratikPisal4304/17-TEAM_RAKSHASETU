@@ -14,8 +14,10 @@ import {
 } from 'react-native';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Location from 'expo-location';
 import { ActivityIndicator } from 'react-native';
 import { useTranslation } from 'react-i18next';
+
 const PINK = '#ff5f96';
 
 const HomeScreen = ({ navigation }) => {
@@ -81,8 +83,58 @@ const HomeScreen = ({ navigation }) => {
     }
   }, [notificationModalVisible, modalOpacity, modalScale]);
 
+  const openNearbyPoliceStations = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        alert(t('home.permissionDenied'));
+        return;
+      }
+      const currentLocation = await Location.getCurrentPositionAsync({});
+      const { latitude, longitude } = currentLocation.coords;
+      const googleMapsURL = `https://www.google.com/maps/search/police+station/@${latitude},${longitude},15z`;
+      await Linking.openURL(googleMapsURL);
+    } catch (error) {
+      console.error('Error fetching location:', error);
+    }
+  };
+
+  const openNearbyHospitals = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        alert(t('home.permissionDenied'));
+        return;
+      }
+      const currentLocation = await Location.getCurrentPositionAsync({});
+      const { latitude, longitude } = currentLocation.coords;
+      const googleMapsURL = `https://www.google.com/maps/search/hospital/@${latitude},${longitude},15z`;
+      await Linking.openURL(googleMapsURL);
+    } catch (error) {
+      console.error('Error fetching location:', error);
+    }
+  };
+
+  const openNearbyPharmacies = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        alert(t('home.permissionDenied'));
+        return;
+      }
+      const currentLocation = await Location.getCurrentPositionAsync({});
+      const { latitude, longitude } = currentLocation.coords;
+      const googleMapsURL = `https://www.google.com/maps/search/pharmacy/@${latitude},${longitude},15z`;
+      await Linking.openURL(googleMapsURL);
+    } catch (error) {
+      console.error('Error fetching location:', error);
+    }
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+
       {/* Notification Modal */}
       <Modal
         transparent={true}
@@ -238,6 +290,38 @@ const HomeScreen = ({ navigation }) => {
               <Text style={styles.journeySubtitle}>{t('home.generateReportSubtitle')}</Text>
             </View>
           </View>
+          <Ionicons name="chevron-forward" size={24} color="black" />
+        </TouchableOpacity>
+
+        {/* Journey Section */}
+        <TouchableOpacity style={styles.journeySection} onPress={() => navigation.navigate('TrackMe')}>
+          <View style={styles.journeyContent}>
+            <Image
+              source={require('../../assets/journey.png')}
+              style={styles.journeyIcon}
+            />
+            <View>
+              <Text style={styles.journeyTitle}>{t('home.journeyTitle')}</Text>
+              <Text style={styles.journeySubtitle}>{t('home.journeySubtitle')}</Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="black" />
+        </TouchableOpacity>
+
+        {/* Emergency Buttons */}
+        <TouchableOpacity style={styles.emergencyButton} onPress={openNearbyPoliceStations}>
+          <FontAwesome5 name="shield-alt" size={20} color="black" />
+          <Text style={styles.emergencyText}>{t('home.policeNearMe')}</Text>
+          <Ionicons name="chevron-forward" size={24} color="black" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.emergencyButton} onPress={openNearbyHospitals}>
+          <FontAwesome5 name="hospital" size={20} color="black" />
+          <Text style={styles.emergencyText}>{t('home.hospitalNearMe')}</Text>
+          <Ionicons name="chevron-forward" size={24} color="black" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.emergencyButton} onPress={openNearbyPharmacies}>
+          <FontAwesome5 name="clinic-medical" size={20} color="black" />
+          <Text style={styles.emergencyText}>{t('home.pharmacyNearMe')}</Text>
           <Ionicons name="chevron-forward" size={24} color="black" />
         </TouchableOpacity>
       </ScrollView>
