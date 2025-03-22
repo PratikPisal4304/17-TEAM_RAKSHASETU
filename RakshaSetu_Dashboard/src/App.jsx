@@ -9,6 +9,7 @@ import Analytics from "./pages/Analytics";
 import Incidents from "./pages/Incidents";
 import Users from "./pages/Users";
 import EmergencyAlerts from "./pages/EmergencyAlerts";
+import Settings from "./pages/Settings";
 
 const App = () => {
   return (
@@ -35,6 +36,7 @@ const App = () => {
                   <Route path="/emergency-alerts" element={<EmergencyAlerts />} />
                   <Route path="/incidents" element={<Incidents />} />
                   <Route path="/users" element={<Users />} />
+                  <Route path="/settings" element={<Settings />} />
                   {/* If any unknown path is visited, redirect to dashboard */}
                   <Route path="*" element={<Navigate to="/dashboard" />} />
                 </Routes>
