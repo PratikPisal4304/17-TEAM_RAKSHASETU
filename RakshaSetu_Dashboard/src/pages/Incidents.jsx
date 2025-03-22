@@ -1,136 +1,112 @@
-import React, { useState, useMemo } from "react";
-import { HiOutlineMagnifyingGlass, HiOutlinePlus, HiOutlineAdjustmentsHorizontal } from "react-icons/hi2";
-
-// Sample data
-const INITIAL_INCIDENTS = [
-  {
-    id: "INC1001",
-    type: "SOS",
-    reporterName: "Priya Sharma",
-    reporterInitials: "PS",
-    userId: "USR1001",
-    location: "Brigade Road, Bangalore",
-    coordinates: "12.9716, 77.5946",
-    time: "19:32",
-    relativeTime: "-301 min ago",
-    status: "active",
-    priority: "high",
-  },
-  {
-    id: "INC1002",
-    type: "Harassment",
-    reporterName: "Ananya Singh",
-    reporterInitials: "AS",
-    userId: "USR1002",
-    location: "MG Road Metro Station, Bangalore",
-    coordinates: "12.9767, 77.6096",
-    time: "18:15",
-    relativeTime: "-224 min ago",
-    status: "active",
-    priority: "high",
-  },
-  {
-    id: "INC1003",
-    type: "Stalking",
-    reporterName: "Kavita Patel",
-    reporterInitials: "KP",
-    userId: "USR1003",
-    location: "Indiranagar 100ft Road, Bangalore",
-    coordinates: "12.9784, 77.6408",
-    time: "16:45",
-    relativeTime: "-134 min ago",
-    status: "pending",
-    priority: "medium",
-  },
-  {
-    id: "INC1004",
-    type: "Unsafe Area",
-    reporterName: "Meera Reddy",
-    reporterInitials: "MR",
-    userId: "USR1004",
-    location: "BTM Layout, Bangalore",
-    coordinates: "12.9712, 77.6101",
-    time: "14:22",
-    relativeTime: "-9 min ago",
-    status: "pending",
-    priority: "low",
-  },
-  {
-    id: "INC1005",
-    type: "SOS",
-    reporterName: "Divya Joshi",
-    reporterInitials: "DJ",
-    userId: "USR1005",
-    location: "HSR Layout, Bangalore",
-    coordinates: "12.9116, 77.6321",
-    time: "23:15",
-    relativeTime: "-15 hours ago",
-    status: "resolved",
-    priority: "high",
-  },
-  {
-    id: "INC1006",
-    type: "Harassment",
-    reporterName: "Priya Sharma",
-    reporterInitials: "PS",
-    userId: "USR1001",
-    location: "Koramangala 5th Block, Bangalore",
-    coordinates: "12.9344, 77.6248",
-    time: "20:10",
-    relativeTime: "-18 hours ago",
-    status: "resolved",
-    priority: "medium",
-  },
-];
+import React, { useState, useEffect, useMemo } from "react";
+import { getStorage, ref, getDownloadURL } from "firebase/storage";
+import {
+  HiOutlineMagnifyingGlass,
+  HiOutlinePlus,
+  HiOutlineAdjustmentsHorizontal,
+} from "react-icons/hi2";
+import { collection, onSnapshot, doc, updateDoc } from "firebase/firestore"; // Added doc, updateDoc
+import { db } from "../firebaseConfig"; // <-- Adjust path as needed
 
 const Incidents = () => {
-  // State for filters
+  // Firestore data
+  const [incidents, setIncidents] = useState([]);
+
+  // Filters
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
-  const [priorityFilter, setPriorityFilter] = useState("all");
 
-  // Filtered data
+  // 1) Fetch incidents from "incident_reports" in real time
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, "incident_reports"), (snapshot) => {
+      const fetched = snapshot.docs.map((doc) => ({
+        docId: doc.id,
+        ...doc.data(),
+      }));
+      setIncidents(fetched);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // 2) Apply local filters using useMemo
   const filteredIncidents = useMemo(() => {
-    return INITIAL_INCIDENTS.filter((incident) => {
-      // Search filter
-      const matchesSearch =
-        incident.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        incident.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        incident.reporterName.toLowerCase().includes(searchTerm.toLowerCase());
+    return incidents.filter((inc) => {
+      // Map Firestore fields to our local variables:
+      const incidentId = inc.id || inc.docId || "";
+      const location = inc.location || "";
+      const type = inc.incidentType || "";
+      const reporterName = inc.reportedBy || "";
+      // Compute status: if it's "pending" or "resolved", use it; otherwise treat it as "active"
+      const computedStatus = (inc.status === "pending" || inc.status === "resolved") ? inc.status : "active";
 
-      // Status filter
-      const matchesStatus = statusFilter === "all" || incident.status === statusFilter;
+      // Search filter (matches ID, location, or reportedBy)
+      const matchesSearch =
+        incidentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        reporterName.toLowerCase().includes(searchTerm.toLowerCase());
+
+      // Status filter uses computedStatus
+      const matchesStatus = statusFilter === "all" || computedStatus === statusFilter;
 
       // Type filter
-      const matchesType = typeFilter === "all" || incident.type === typeFilter;
+      const matchesType = typeFilter === "all" || type === typeFilter;
 
-      // Priority filter
-      const matchesPriority = priorityFilter === "all" || incident.priority === priorityFilter;
-
-      return matchesSearch && matchesStatus && matchesType && matchesPriority;
+      return matchesSearch && matchesStatus && matchesType;
     });
-  }, [searchTerm, statusFilter, typeFilter, priorityFilter]);
+  }, [incidents, searchTerm, statusFilter, typeFilter]);
 
-  // Stats
-  const activeCount = filteredIncidents.filter((i) => i.status === "active").length;
+  // 3) Stats: Count active/pending/resolved from filtered data using computed status
+  const activeCount = filteredIncidents.filter((i) => {
+    const cs = (i.status === "pending" || i.status === "resolved") ? i.status : "active";
+    return cs === "active";
+  }).length;
   const pendingCount = filteredIncidents.filter((i) => i.status === "pending").length;
   const resolvedCount = filteredIncidents.filter((i) => i.status === "resolved").length;
   const totalCount = filteredIncidents.length;
+
+  // State for the selected incident and modal visibility
+  const [selectedIncident, setSelectedIncident] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+
+  // Handler to show the modal with the selected incident
+  const handleView = (incident) => {
+    setSelectedIncident(incident);
+    setShowModal(true);
+  };
+
+  // Convert Firestore Timestamp objects (or {seconds, nanoseconds} objects) to string
+  function formatTimestamp(value) {
+    if (!value) return "";
+    if (value.toDate) {
+      return value.toDate().toLocaleString();
+    }
+    if (value.seconds !== undefined) {
+      const millis = value.seconds * 1000 + (value.nanoseconds || 0) / 1000000;
+      return new Date(millis).toLocaleString();
+    }
+    if (typeof value === "string") {
+      return value;
+    }
+    return "";
+  }
 
   return (
     <div className="container-fluid">
       {/* Page Header */}
       <div className="mb-4">
-        <h1 className="h3 mb-1">Incident Management</h1>
-        <p className="text-muted mb-0">Track and manage reported safety incidents</p>
+        <h1 className="h3 mb-1">FIR Management</h1>
+        <p className="text-muted mb-0">Track and manage reported incidents</p>
       </div>
 
       {/* Filter Row */}
       <div className="row g-2 align-items-center mb-4">
         <div className="col-sm-6 col-md-3">
           <div className="input-group">
-          <span className="input-group-text" id="search-icon"><HiOutlineMagnifyingGlass /></span>
+            <span className="input-group-text" id="search-icon">
+              <HiOutlineMagnifyingGlass />
+            </span>
             <input
               type="text"
               className="form-control"
@@ -165,18 +141,6 @@ const Incidents = () => {
             <option value="Harassment">Harassment</option>
             <option value="Stalking">Stalking</option>
             <option value="Unsafe Area">Unsafe Area</option>
-          </select>
-        </div>
-        <div className="col-sm-6 col-md-2">
-          <select
-            className="form-select"
-            value={priorityFilter}
-            onChange={(e) => setPriorityFilter(e.target.value)}
-          >
-            <option value="all">All Priorities</option>
-            <option value="high">High</option>
-            <option value="medium">Medium</option>
-            <option value="low">Low</option>
           </select>
         </div>
         <div className="col-auto">
@@ -244,68 +208,71 @@ const Incidents = () => {
                 <tr>
                   <th scope="col">Incident ID</th>
                   <th scope="col">Type</th>
+                  <th scope="col">Description</th>
                   <th scope="col">Reported By</th>
                   <th scope="col">Location</th>
                   <th scope="col">Time</th>
                   <th scope="col">Status</th>
-                  <th scope="col">Priority</th>
+                  <th scope="col">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredIncidents.map((incident) => (
-                  <tr key={incident.id}>
-                    <td>{incident.id}</td>
-                    <td>
-                      <span
-                        className="me-2 d-inline-block rounded-circle"
-                        style={{
-                          width: "1rem",
-                          height: "1rem",
-                          backgroundColor: getTypeColor(incident.type),
-                        }}
-                      />
-                      {incident.type}
-                    </td>
-                    <td>
-                      <div className="d-flex align-items-center gap-2">
-                        <div
-                          className="rounded-circle bg-secondary bg-opacity-25 d-flex align-items-center justify-content-center fw-bold"
-                          style={{ width: "32px", height: "32px" }}
+                {filteredIncidents.map((incident) => {
+                  const {
+                    docId,
+                    id,
+                    incidentType,
+                    description,
+                    reportedBy,
+                    location,
+                    coordinates,
+                    timestamp,
+                    relativeTime,
+                    status,
+                  } = incident;
+
+                  const displayTime = formatTimestamp(timestamp) || "N/A";
+                  const displayRelativeTime = formatTimestamp(relativeTime) || "";
+                  const displayId = id || docId;
+                  const computedStatus =
+                    status === "pending" || status === "resolved" ? status : "active";
+
+                  return (
+                    <tr key={displayId}>
+                      <td>{displayId}</td>
+                      <td>{incidentType || "N/A"}</td>
+                      <td>{description || "N/A"}</td>
+                      <td>{reportedBy || "N/A"}</td>
+                      <td>
+                        {location || "N/A"}
+                        <br />
+                        <small className="text-muted">{coordinates || ""}</small>
+                      </td>
+                      <td>
+                        {displayTime}
+                        <br />
+                        <small className="text-muted">{displayRelativeTime}</small>
+                      </td>
+                      <td>
+                        <span className={`badge ${getStatusBadge(computedStatus)}`}>
+                          {computedStatus}
+                        </span>
+                      </td>
+                      <td>
+                        <button
+                          className="btn btn-sm btn-primary"
+                          onClick={() => handleView(incident)}
                         >
-                          {incident.reporterInitials}
-                        </div>
-                        <div>
-                          <div className="fw-semibold mb-0">{incident.reporterName}</div>
-                          <small className="text-muted">{incident.userId}</small>
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      {incident.location}
-                      <br />
-                      <small className="text-muted">{incident.coordinates}</small>
-                    </td>
-                    <td>
-                      {incident.time}
-                      <br />
-                      <small className="text-muted">{incident.relativeTime}</small>
-                    </td>
-                    <td>
-                      <span className={`badge ${getStatusBadge(incident.status)}`}>
-                        {incident.status}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`badge ${getPriorityBadge(incident.priority)}`}>
-                        {incident.priority}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
 
                 {filteredIncidents.length === 0 && (
                   <tr>
-                    <td colSpan="7" className="text-center py-4">
+                    <td colSpan="8" className="text-center py-4">
                       No incidents found.
                     </td>
                   </tr>
@@ -315,11 +282,143 @@ const Incidents = () => {
           </div>
         </div>
       </div>
+
+      {/* Incident Details Modal */}
+      {showModal && selectedIncident && (
+        <IncidentDetailsModal
+          incident={selectedIncident}
+          onClose={() => setShowModal(false)}
+        />
+      )}
     </div>
   );
 };
 
-// Utility functions
+// Modal Component to show all details of the selected incident
+function IncidentDetailsModal({ incident, onClose }) {
+  const [imageUrls, setImageUrls] = useState([]);
+  const storage = getStorage();
+
+  // Fetch images from Firebase Storage using attachedImages (assumed to be storage paths)
+  useEffect(() => {
+    async function fetchImageUrls() {
+      if (incident.attachedImages && Array.isArray(incident.attachedImages)) {
+        const promises = incident.attachedImages.map(async (path) => {
+          try {
+            const imageRef = ref(storage, path);
+            const url = await getDownloadURL(imageRef);
+            return url;
+          } catch (error) {
+            console.error("Error fetching image:", error);
+            return null;
+          }
+        });
+        const urls = await Promise.all(promises);
+        setImageUrls(urls.filter((url) => url !== null));
+      }
+    }
+    fetchImageUrls();
+  }, [incident.attachedImages, storage]);
+
+  const displayTime = formatTimestamp(incident.timestamp) || "N/A";
+  const displayRelativeTime = formatTimestamp(incident.relativeTime) || "";
+
+  // Handler to update the incident's status in Firestore
+  const handleStatusUpdate = async (newStatus) => {
+    try {
+      const incidentRef = doc(db, "incident_reports", incident.docId);
+      await updateDoc(incidentRef, { status: newStatus });
+      onClose();
+    } catch (error) {
+      console.error("Error updating status:", error);
+    }
+  };
+
+  return (
+    <div
+      className="modal fade show"
+      style={{ display: "block", backgroundColor: "rgba(0,0,0,0.5)" }}
+      aria-modal="true"
+      role="dialog"
+    >
+      <div className="modal-dialog modal-lg modal-dialog-centered">
+        <div className="modal-content">
+          <div className="modal-header">
+            <h5 className="modal-title">Incident Details</h5>
+            <button type="button" className="btn-close" onClick={onClose} aria-label="Close"></button>
+          </div>
+          <div className="modal-body">
+            <p><strong>Incident ID:</strong> {incident.id || incident.docId}</p>
+            <p><strong>Type:</strong> {incident.incidentType || "N/A"}</p>
+            <p><strong>Description:</strong> {incident.description || "N/A"}</p>
+            <p><strong>Reported By:</strong> {incident.reportedBy || "N/A"}</p>
+            <p><strong>Location:</strong> {incident.location || "N/A"}</p>
+            {incident.coordinates && (
+              <p><strong>Coordinates:</strong> {incident.coordinates}</p>
+            )}
+            <p><strong>Time:</strong> {displayTime}</p>
+            {displayRelativeTime && (
+              <p><strong>Relative Time:</strong> {displayRelativeTime}</p>
+            )}
+            <p><strong>Status:</strong> {incident.status || "active"}</p>
+            {/* Attached Images */}
+            <div>
+              <strong>Attached Images:</strong>
+              {imageUrls.length > 0 ? (
+                <div className="d-flex flex-wrap gap-2 mt-2">
+                  {imageUrls.map((url, idx) => (
+                    <img
+                      key={idx}
+                      src={url}
+                      alt={`Attachment ${idx + 1}`}
+                      style={{ width: "100px", height: "100px", objectFit: "cover" }}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted">No images available.</p>
+              )}
+            </div>
+          </div>
+          <div className="modal-footer">
+            <button
+              className="btn btn-warning"
+              onClick={() => handleStatusUpdate("pending")}
+            >
+              Pending
+            </button>
+            <button
+              className="btn btn-success"
+              onClick={() => handleStatusUpdate("resolved")}
+            >
+              Resolved
+            </button>
+            <button className="btn btn-secondary" onClick={onClose}>
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Convert Firestore Timestamp objects (or {seconds, nanoseconds} objects) to string
+function formatTimestamp(value) {
+  if (!value) return "";
+  if (value.toDate) {
+    return value.toDate().toLocaleString();
+  }
+  if (value.seconds !== undefined) {
+    const millis = value.seconds * 1000 + (value.nanoseconds || 0) / 1000000;
+    return new Date(millis).toLocaleString();
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  return "";
+}
+
 function getTypeColor(type) {
   switch (type) {
     case "SOS":
@@ -336,29 +435,9 @@ function getTypeColor(type) {
 }
 
 function getStatusBadge(status) {
-  switch (status) {
-    case "active":
-      return "bg-danger";
-    case "pending":
-      return "bg-warning text-dark";
-    case "resolved":
-      return "bg-success";
-    default:
-      return "bg-secondary";
-  }
-}
-
-function getPriorityBadge(priority) {
-  switch (priority) {
-    case "high":
-      return "bg-danger";
-    case "medium":
-      return "bg-warning text-dark";
-    case "low":
-      return "bg-info text-dark";
-    default:
-      return "bg-secondary";
-  }
+  if (status === "pending") return "bg-warning text-dark";
+  if (status === "resolved") return "bg-success";
+  return "bg-danger"; // default to active
 }
 
 export default Incidents;
