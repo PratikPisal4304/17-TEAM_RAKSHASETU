@@ -81,6 +81,7 @@
         "notificationSettings": "Notification Settings",
         "customizeThemes": "Customize / Themes",
         "enableShake": "Enable Shake to Activate SOS",
+        "enableVoice": "Enable voice to activate SOS",
         "helpLineNumbers": "Help Line Numbers",
         "helpSupport": "Help & Support",
         "aboutUs": "About Us",
