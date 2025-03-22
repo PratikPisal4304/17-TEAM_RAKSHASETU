@@ -111,11 +111,6 @@ const ProfileScreen = ({ navigation }) => {
       icon: 'bell',
       options: [t('profile.allNotifications'), t('profile.mentionsOnly'), t('profile.muteAll')],
     },
-    {
-      title: t('profile.customizeThemes'),
-      icon: 'palette',
-      options: [t('profile.lightMode'), t('profile.darkMode'), t('profile.systemDefault')],
-    },
   ];
 
   const moreItems = [
