@@ -12,7 +12,7 @@ import HomeScreen from "./screens/HomeScreen";
 import TrackMeScreen from "./screens/TrackMeScreen";
 import SOSScreen from "./screens/SOSScreen";
 import ProfileScreen from "./screens/ProfileScreen";
-
+import EditProfileScreen from "./screens/EditProfileScreen";
 import CommunityScreen from "./screens/CommunityScreen";
  
 
@@ -39,6 +39,7 @@ function ProfileStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="ProfileMain" component={ProfileScreen} />
+      <Stack.Screen name="EditProfile" component={EditProfileScreen} />
     </Stack.Navigator>
   );
 }
