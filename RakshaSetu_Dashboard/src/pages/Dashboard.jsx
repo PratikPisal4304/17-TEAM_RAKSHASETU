@@ -1,13 +1,23 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   HiOutlineExclamationCircle,
   HiOutlineClock,
   HiOutlineCheckCircle,
   HiOutlineUsers,
 } from "react-icons/hi2";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { db } from "../firebaseConfig"; // Adjust path as needed
 
 const Dashboard = () => {
-  // Sample data for recent incidents
+  // Live data states
+  const [activeAlertsCount, setActiveAlertsCount] = useState(0);
+  const [registeredUsersCount, setRegisteredUsersCount] = useState(0);
+
+  // Static sample for pending, resolved, and other incidents
+  const pendingReports = 8;
+  const resolvedCases = 87;
+
+  // Static sample data for Recent Incidents (kept as is)
   const incidents = [
     {
       user: "U1298",
@@ -46,6 +56,23 @@ const Dashboard = () => {
     },
   ];
 
+  // Fetch active alerts count from "sosAlerts" where status is "active"
+  useEffect(() => {
+    const q = query(collection(db, "sosAlerts"), where("status", "==", "active"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setActiveAlertsCount(snapshot.size);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Fetch registered users count from "users" collection
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
+      setRegisteredUsersCount(snapshot.size);
+    });
+    return () => unsubscribe();
+  }, []);
+
   return (
     <div className="container-fluid">
       {/* Page Title & Subtitle */}
@@ -69,7 +96,7 @@ const Dashboard = () => {
                   <HiOutlineExclamationCircle size={20} />
                 </div>
               </div>
-              <h2 className="fw-bold">12</h2>
+              <h2 className="fw-bold">{activeAlertsCount}</h2>
               <a href="#active-alerts" className="text-danger">
                 View all active alerts
               </a>
@@ -90,7 +117,7 @@ const Dashboard = () => {
                   <HiOutlineClock size={20} />
                 </div>
               </div>
-              <h2 className="fw-bold">8</h2>
+              <h2 className="fw-bold">{pendingReports}</h2>
               <a href="#pending-reports" className="text-warning">
                 View pending reports
               </a>
@@ -111,7 +138,7 @@ const Dashboard = () => {
                   <HiOutlineCheckCircle size={20} />
                 </div>
               </div>
-              <h2 className="fw-bold">87</h2>
+              <h2 className="fw-bold">{resolvedCases}</h2>
               <a href="#resolved-cases" className="text-success">
                 View all resolved cases
               </a>
@@ -132,7 +159,7 @@ const Dashboard = () => {
                   <HiOutlineUsers size={20} />
                 </div>
               </div>
-              <h2 className="fw-bold">1243</h2>
+              <h2 className="fw-bold">{registeredUsersCount}</h2>
               <a href="#registered-users" className="text-primary">
                 View all users
               </a>
@@ -172,7 +199,6 @@ const Dashboard = () => {
                     <td>{incident.location}</td>
                     <td>{incident.time}</td>
                     <td>
-                      {/* Status Badge */}
                       {incident.status === "active" && (
                         <span className="badge bg-danger">{incident.status}</span>
                       )}
