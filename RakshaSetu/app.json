@@ -1,12 +1,14 @@
 {
   "expo": {
-    "name": "RakshaSetu",
+    "name": "raksha-setu",
     "slug": "raksha-setu",
+    "scheme": "raksha-setu",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -21,10 +23,12 @@
         "backgroundColor": "#ffffff"
       }
     },
+
     "web": {
       "favicon": "./assets/favicon.png",
+
       
-            "config": {
+      "config": {
         "firebase": {
           "apiKey": "AIzaSyBRD6pmrMCcuAksz8hqxXAkP8hV3jih47c",
           "authDomain": "rakshasetu-c9e0b.firebaseapp.com",
@@ -36,6 +40,7 @@
           
         }
       }
+      
     }
   }
 }
