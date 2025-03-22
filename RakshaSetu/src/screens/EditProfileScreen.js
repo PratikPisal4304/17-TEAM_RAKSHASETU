@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,22 +15,23 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
+import { doc, updateDoc, getDoc } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { auth, db } from '../../config/firebaseConfig';
 import { useTranslation } from 'react-i18next';
 
 const EditProfileScreen = ({ navigation }) => {
   const { t } = useTranslation();
-  
-  // Static user data
-  const [name, setName] = useState('Lucy Patil');
-  const [phone, setPhone] = useState('+91 1234567890');
-  const [email, setEmail] = useState('lucy@example.com');
-  const [address, setAddress] = useState('123 Main Street');
-  const [gender, setGender] = useState('Female');
-  const [dob, setDob] = useState('01/01/1990');
-  const [date, setDate] = useState(new Date(1990, 0, 1));
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [address, setAddress] = useState('');
+  const [gender, setGender] = useState('');
+  const [dob, setDob] = useState('');
+  const [date, setDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [avatarUri, setAvatarUri] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
 
   // Format a Date object as dd/mm/yyyy
   const formatDate = (date) => {
@@ -40,7 +41,71 @@ const EditProfileScreen = ({ navigation }) => {
     return `${day}/${month}/${year}`;
   };
 
-  // Dummy save function that simply alerts and navigates back
+  // Parse a dd/mm/yyyy string into a Date object
+  const parseDateFromString = (dateString) => {
+    const parts = dateString.split('/');
+    if (parts.length === 3) {
+      const day = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const year = parseInt(parts[2], 10);
+      return new Date(year, month, day);
+    }
+    return new Date();
+  };
+
+  // Fetch user data from Firestore only
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const user = auth.currentUser;
+        if (user) {
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists()) {
+            const data = userDoc.data();
+            setName(data.name || '');
+            setPhone(data.phone || '');
+            setEmail(data.email || '');
+            setAddress(data.address || '');
+            setGender(data.gender || '');
+            setAvatarUri(data.avatarUrl || '');
+            if (data.dob) {
+              // Check if dob is stored as an object with day, month, year keys
+              if (typeof data.dob === 'object' && data.dob.day) {
+                const day = data.dob.day.toString().padStart(2, '0');
+                const month = data.dob.month.toString().padStart(2, '0');
+                const year = data.dob.year;
+                const formattedDob = `${day}/${month}/${year}`;
+                setDob(formattedDob);
+                setDate(new Date(year, data.dob.month - 1, data.dob.day));
+              } else {
+                // Assume dob is stored as a string
+                setDob(data.dob);
+                setDate(parseDateFromString(data.dob));
+              }
+            }
+          } else {
+            Alert.alert(t('editProfile.noData'), t('editProfile.noData'));
+          }
+        }
+      } catch (error) {
+        Alert.alert(t('common.error'), t('editProfile.uploadError'));
+      }
+    };
+
+    fetchUserData();
+  }, [t]);
+
+  const validateEmail = (email) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(String(email).toLowerCase());
+  };
+
+  const validatePhone = (phone) => {
+    const re = /^\+?[1-9]\d{1,14}$/;
+    return re.test(phone);
+  };
+
+  // Handle saving changes to the profile
   const handleSave = async () => {
     if (!name.trim()) {
       Alert.alert(
@@ -49,16 +114,40 @@ const EditProfileScreen = ({ navigation }) => {
       );
       return;
     }
-    // Add any other validation as needed.
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    if (!validateEmail(email)) {
+      Alert.alert(t('common.error'), t('editProfile.emailPlaceholder'));
+      return;
+    }
+    if (phone && !validatePhone(phone)) {
+      Alert.alert(t('common.error'), t('editProfile.phonePlaceholder'));
+      return;
+    }
+    try {
+      setIsLoading(true);
+      const user = auth.currentUser;
+      if (!user) throw new Error('User not authenticated');
+
+      const userData = {
+        name,
+        phone,
+        email,
+        address,
+        gender,
+        dob: formatDate(date), // save in dd/mm/yyyy format
+        ...(avatarUri && { avatarUrl: avatarUri }),
+      };
+
+      await updateDoc(doc(db, 'users', user.uid), userData);
       Alert.alert(t('editProfile.saveButtonText'), t('editProfile.saveButtonText'));
       navigation.goBack();
-    }, 1000);
+    } catch (error) {
+      Alert.alert(t('common.error'), error.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // Image picking logic (static: only sets local state)
+  // Image picking and upload logic
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -69,7 +158,19 @@ const EditProfileScreen = ({ navigation }) => {
 
     if (!result.canceled) {
       const uri = result.assets[0].uri;
-      setAvatarUri(uri);
+      try {
+        const storage = getStorage();
+        const storageRef = ref(storage, `avatars/${auth.currentUser.uid}`);
+        
+        const response = await fetch(uri);
+        const blob = await response.blob();
+        
+        await uploadBytes(storageRef, blob);
+        const downloadURL = await getDownloadURL(storageRef);
+        setAvatarUri(downloadURL);
+      } catch (error) {
+        Alert.alert(t('common.error'), t('editProfile.uploadError'));
+      }
     }
   };
 
@@ -199,8 +300,6 @@ const EditProfileScreen = ({ navigation }) => {
     </KeyboardAvoidingView>
   );
 };
-
-export default EditProfileScreen;
 
 const styles = StyleSheet.create({
   container: {
@@ -333,3 +432,5 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 });
+
+export default EditProfileScreen;
