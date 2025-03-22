@@ -13,6 +13,16 @@ import {
   Linking
 } from 'react-native';
 import * as Contacts from 'expo-contacts';
+import { 
+  collection, 
+  onSnapshot, 
+  doc, 
+  getDoc, 
+  updateDoc,
+  setDoc,
+  serverTimestamp 
+} from 'firebase/firestore';
+import { auth, db } from '../../config/firebaseConfig';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -82,11 +92,42 @@ export default function AddFriendsScreen({ navigation }) {
   useFocusEffect(
     useCallback(() => {
       fetchContacts();
+      fetchCloseFriends();
       return () => {};
     }, [])
   );
 
-  // Toggle selection for a contact
+  // Fetch close friends from Firestore and mark them as selected (using their IDs)
+  const fetchCloseFriends = async () => {
+    const user = auth.currentUser;
+    if (!user) {
+      setError('You must be logged in to view friends');
+      return;
+    }
+    
+    try {
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        if (data.closeFriends) {
+          console.log("Retrieved close friends:", data.closeFriends.length);
+          // Set selectedContacts to the list of saved friend IDs
+          setSelectedContacts(data.closeFriends.map(friend => friend.id));
+        }
+      } else {
+        await setDoc(doc(db, 'users', user.uid), {
+          closeFriends: [],
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+        setSelectedContacts([]);
+      }
+    } catch (error) {
+      console.error("Error fetching close friends:", error);
+      setError('Failed to load your friends list');
+    }
+  };
+
   const toggleContactSelection = (id) => {
     setSelectedContacts((prev) =>
       prev.includes(id)
@@ -95,17 +136,47 @@ export default function AddFriendsScreen({ navigation }) {
     );
   };
 
-  // Simulate saving selected contacts (Firebase removed; just simulate saving)
+  // Save selected contacts to Firestore (store name, phone and id)
   const saveSelectedContacts = async () => {
     setSaving(true);
-    setTimeout(() => {
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        Alert.alert('Error', 'You must be logged in to save contacts');
+        return;
+      }
+      const userDocRef = doc(db, 'users', user.uid);
+      // Build an array of friend objects from the selected contacts
+      const selectedFriends = contacts.filter(contact => selectedContacts.includes(contact.id));
+      const friendsToSave = selectedFriends.map(contact => ({
+        id: contact.id,
+        name: contact.name,
+        phone: contact.phoneNumbers[0].number
+      }));
+      const userDoc = await getDoc(userDocRef);
+      if (userDoc.exists()) {
+        await updateDoc(userDocRef, {
+          closeFriends: friendsToSave,
+          updatedAt: serverTimestamp()
+        });
+      } else {
+        await setDoc(userDocRef, {
+          closeFriends: friendsToSave,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+      }
       Alert.alert(
         'Success', 
         'Contacts saved successfully',
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
+    } catch (error) {
+      console.error('Error saving contacts:', error);
+      Alert.alert('Error', 'Failed to save contacts. Please try again.');
+    } finally {
       setSaving(false);
-    }, 500);
+    }
   };
 
   // Enhanced search: if query contains digits, search by phone; otherwise, search by name.
@@ -138,7 +209,7 @@ export default function AddFriendsScreen({ navigation }) {
     }
   };
 
-  // Compute selected friends from the contacts list
+  // Compute selected friends from the contacts list (even if not in filtered list)
   const selectedFriends = useMemo(() => {
     return contacts.filter(contact => selectedContacts.includes(contact.id));
   }, [contacts, selectedContacts]);
@@ -593,6 +664,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  // New styles for selected friends displayed on top
   selectedFriendsContainer: {
     paddingHorizontal: 16,
     paddingVertical: 8,
