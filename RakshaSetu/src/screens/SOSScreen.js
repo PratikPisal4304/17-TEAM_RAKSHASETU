@@ -1,36 +1,110 @@
-import React, { useEffect, useState } from 'react';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import * as Location from 'expo-location';
+import * as SMS from 'expo-sms';
+import {
+  addDoc,
+  collection,
+  doc,
+  getDocs,
+  onSnapshot,
+  query,
+  serverTimestamp,
+  updateDoc,
+  where
+} from 'firebase/firestore';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
+  Alert,
   StyleSheet,
   Text,
   TouchableOpacity,
+  Vibration,
   View
 } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
+import { auth, db } from '../../config/firebaseConfig';
+// Import the API key from the .env file
+import { GOOGLE_MAPS_API_KEY } from '@env';
 
 function SOSScreen() {
+  const { t } = useTranslation();
+  const route = useRoute();
+  const navigation = useNavigation();
   const [isSOSActive, setIsSOSActive] = useState(false);
   const [countdown, setCountdown] = useState(10);
   const [isSendingSOS, setIsSendingSOS] = useState(false);
   const [location, setLocation] = useState(null);
+  const [closeFriends, setCloseFriends] = useState([]);
 
+  // Listen for changes to the user's "closeFriends" field.
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
+    const userDocRef = doc(db, 'users', user.uid);
+    console.log("Listening for 'closeFriends' in user's doc...");
+    const unsubscribe = onSnapshot(
+      userDocRef,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          if (data.closeFriends && Array.isArray(data.closeFriends)) {
+            console.log("Fetched closeFriends:", data.closeFriends);
+            setCloseFriends(data.closeFriends);
+          } else {
+            console.log("No 'closeFriends' array found in user doc.");
+            setCloseFriends([]);
+          }
+        } else {
+          console.log("User document does not exist.");
+          setCloseFriends([]);
+        }
+      },
+      (error) => {
+        console.error("Error fetching user doc:", error);
+        Alert.alert(t('common.error'), t('sos.failedToSend'));
+      }
+    );
+    return () => unsubscribe();
+  }, [t]);
+
+  // Request location permission on mount.
+  useEffect(() => {
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(t('common.error'), t('sos.permissionDenied'));
+      }
+    })();
+  }, [t]);
+
+  // Countdown logic with vibration.
   useEffect(() => {
     let timer;
     if (isSOSActive && countdown > 0) {
       timer = setInterval(() => {
-        setCountdown(prev => prev - 1);
+        Vibration.vibrate(500);
+        setCountdown((prev) => prev - 1);
       }, 1000);
     }
     if (countdown === 0 && isSOSActive) {
       clearInterval(timer);
-      setIsSendingSOS(true);
-      setTimeout(() => {
-        setIsSendingSOS(false);
-        setIsSOSActive(false);
-      }, 2000);
+      triggerSOS();
     }
     return () => timer && clearInterval(timer);
   }, [isSOSActive, countdown]);
+
+  // Auto-activate SOS if route parameter is set.
+  useFocusEffect(
+    useCallback(() => {
+      if (route.params?.autoActivate && !isSOSActive) {
+        console.log("Auto-activating SOS due to autoActivate param on focus.");
+        startSOS();
+        navigation.setParams({ autoActivate: false });
+      }
+    }, [route.params, isSOSActive, navigation])
+  );
 
   const startSOS = () => {
     setIsSOSActive(true);
@@ -42,29 +116,167 @@ function SOSScreen() {
     setCountdown(10);
   };
 
+  // Send an in-app chat message.
+  const sendSOSInAppChat = async (message) => {
+    const user = auth.currentUser;
+    if (!user) return;
+    try {
+      const threadsQuery = query(
+        collection(db, "threads"),
+        where("participants", "array-contains", user.uid)
+      );
+      const querySnapshot = await getDocs(threadsQuery);
+      querySnapshot.forEach(async (docSnap) => {
+        const threadId = docSnap.id;
+        await addDoc(collection(db, "threads", threadId, "messages"), {
+          senderId: user.uid,
+          text: message,
+          media: null,
+          createdAt: serverTimestamp(),
+          read: false,
+        });
+        await updateDoc(doc(db, "threads", threadId), {
+          lastMessage: message,
+          lastTimestamp: serverTimestamp(),
+        });
+      });
+      console.log("SOS in-app messages sent.");
+    } catch (e) {
+      console.error("Error sending SOS via in-app chat:", e);
+    }
+  };
+
+  // Log the SOS event to Firestore.
+  const logSOSEvent = async (data) => {
+    try {
+      await addDoc(collection(db, 'sosAlerts'), {
+        ...data,
+        userId: auth.currentUser?.uid,
+        timestamp: serverTimestamp(),
+      });
+      console.log("SOS event logged in Firestore.");
+    } catch (error) {
+      console.error("Error logging SOS event:", error);
+    }
+  };
+
+  // Update the user's document with the last SOS time.
+  const updateUserLastSOS = async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+    try {
+      await updateDoc(doc(db, 'users', user.uid), {
+        lastSOS: serverTimestamp()
+      });
+      console.log("User's last SOS time updated.");
+    } catch (error) {
+      console.error("Error updating user's last SOS:", error);
+    }
+  };
+
+  const triggerSOS = async () => {
+    setIsSendingSOS(true);
+    try {
+      // Get current location
+      const loc = await Location.getCurrentPositionAsync({});
+      setLocation(loc.coords);
+      const { latitude, longitude } = loc.coords;
+
+      // Verify API key is loaded
+      if (!GOOGLE_MAPS_API_KEY) {
+        console.error("GOOGLE_MAPS_API_KEY is not defined!");
+        Alert.alert(t('common.error'), "API key not found.");
+        setIsSendingSOS(false);
+        return;
+      }
+      console.log("GOOGLE_MAPS_API_KEY:", GOOGLE_MAPS_API_KEY);
+
+      // Construct Street View URLs using the API key from .env.
+      const streetViewUrl1 = `https://maps.googleapis.com/maps/api/streetview?size=400x400&location=${latitude},${longitude}&fov=90&heading=0&pitch=10&key=${GOOGLE_MAPS_API_KEY}`;
+      const streetViewUrl2 = `https://maps.googleapis.com/maps/api/streetview?size=400x400&location=${latitude},${longitude}&fov=90&heading=120&pitch=10&key=${GOOGLE_MAPS_API_KEY}`;
+      const streetViewUrl3 = `https://maps.googleapis.com/maps/api/streetview?size=400x400&location=${latitude},${longitude}&fov=90&heading=240&pitch=10&key=${GOOGLE_MAPS_API_KEY}`;
+
+      // Log the constructed URLs for debugging purposes.
+      console.log("Street View URL 1:", streetViewUrl1);
+      console.log("Street View URL 2:", streetViewUrl2);
+      console.log("Street View URL 3:", streetViewUrl3);
+      
+      // Build message text
+      const message = `${t('sos.header')}
+
+${t('sos.emergencyMessage')}
+
+My location: https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}
+
+Street View 1: ${streetViewUrl1}
+
+Street View 2: ${streetViewUrl2}
+
+Street View 3: ${streetViewUrl3}`;
+
+      // Determine contacts (closeFriends or fallback contacts)
+      const allContacts = closeFriends.length > 0 ? closeFriends : [
+        { id: '1', name: 'Fallback Friend', phone: '+9112345678910' },
+        { id: '2', name: 'Police', phone: '100' },
+      ];
+      console.log("Sending SMS to:", allContacts);
+
+      // Send SMS if available
+      const isAvailable = await SMS.isAvailableAsync();
+      if (isAvailable) {
+        await SMS.sendSMSAsync(
+          allContacts.map(contact => contact.phone),
+          message
+        );
+        Alert.alert(t('sos.sosSent'), t('sos.sosSentMessage'));
+      } else {
+        Alert.alert(t('sos.smsNotAvailable'), t('sos.smsNotAvailableMessage'));
+      }
+      
+      // Send in-app chat messages
+      await sendSOSInAppChat(message);
+      
+      // Log SOS event to Firestore
+      await logSOSEvent({
+        latitude,
+        longitude,
+        message,
+        streetViewUrls: [streetViewUrl1, streetViewUrl2, streetViewUrl3]
+      });
+      
+      // Update the user's last SOS time in Firestore
+      await updateUserLastSOS();
+    } catch (error) {
+      console.error('Error triggering SOS:', error);
+      Alert.alert(t('common.error'), t('sos.failedToSend'));
+    }
+    setIsSendingSOS(false);
+    setIsSOSActive(false);
+  };
+
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>SOS Alert</Text>
-      <Text style={styles.infoText}>Send an immediate alert.</Text>
+      <Text style={styles.header}>{t('sos.header')}</Text>
+      <Text style={styles.infoText}>{t('sos.infoText')}</Text>
       {!isSOSActive && !isSendingSOS && (
         <TouchableOpacity style={styles.sosButton} onPress={startSOS}>
-          <Text style={styles.sosButtonText}>SOS</Text>
+          <Text style={styles.sosButtonText}>{t('sos.sosButton')}</Text>
         </TouchableOpacity>
       )}
       {isSOSActive && (
         <View style={styles.countdownContainer}>
           <Text style={styles.countdownText}>
-            Alert in {countdown} seconds
+            {t('sos.countdown', { count: countdown })}
           </Text>
           <TouchableOpacity style={styles.cancelButton} onPress={cancelSOS}>
-            <Text style={styles.cancelButtonText}>Cancel Alert</Text>
+            <Text style={styles.cancelButtonText}>{t('sos.cancelAlert')}</Text>
           </TouchableOpacity>
         </View>
       )}
       {isSendingSOS && (
         <View style={styles.sendingContainer}>
           <ActivityIndicator size="large" color="#fff" />
-          <Text style={styles.sendingText}>Sending SOS...</Text>
+          <Text style={styles.sendingText}>{t('sos.sendingText')}</Text>
         </View>
       )}
       {location && (
@@ -75,10 +287,10 @@ function SOSScreen() {
               latitude: location.latitude,
               longitude: location.longitude,
               latitudeDelta: 0.005,
-              longitudeDelta: 0.005
+              longitudeDelta: 0.005,
             }}
           >
-            <Marker coordinate={location} title="SOS Location" />
+            <Marker coordinate={location} title={t('sos.header')} />
           </MapView>
         </View>
       )}
@@ -92,21 +304,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffd1e1',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20
+    padding: 20,
   },
   header: {
     fontSize: 34,
     color: '#333',
     marginBottom: 20,
     fontWeight: 'bold',
-    textAlign: 'center'
+    textAlign: 'center',
   },
   infoText: {
     fontSize: 16,
     color: '#444',
     textAlign: 'center',
     marginBottom: 40,
-    paddingHorizontal: 20
+    paddingHorizontal: 20,
   },
   sosButton: {
     backgroundColor: '#e60000',
@@ -120,40 +332,40 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 8,
-    elevation: 12
+    elevation: 12,
   },
   sosButtonText: {
     fontSize: 64,
     color: '#fff',
-    fontWeight: 'bold'
+    fontWeight: 'bold',
   },
   countdownContainer: {
     alignItems: 'center',
-    marginBottom: 20
+    marginBottom: 20,
   },
   countdownText: {
     fontSize: 24,
     color: '#333',
-    marginBottom: 10
+    marginBottom: 10,
   },
   cancelButton: {
     backgroundColor: '#888',
     paddingVertical: 12,
     paddingHorizontal: 25,
-    borderRadius: 8
+    borderRadius: 8,
   },
   cancelButtonText: {
     fontSize: 20,
-    color: '#fff'
+    color: '#fff',
   },
   sendingContainer: {
     alignItems: 'center',
-    marginVertical: 20
+    marginVertical: 20,
   },
   sendingText: {
     fontSize: 22,
     color: '#333',
-    marginTop: 10
+    marginTop: 10,
   },
   mapContainer: {
     width: '100%',
@@ -162,12 +374,12 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#ccc'
+    borderColor: '#ccc',
   },
   map: {
     width: '100%',
-    height: '100%'
-  }
+    height: '100%',
+  },
 });
 
 export default SOSScreen;
