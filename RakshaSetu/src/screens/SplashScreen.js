@@ -1,12 +1,76 @@
-import { View, Text } from 'react-native'
-import React from 'react'
+// SplashScreen.js
+import React, { useEffect, useRef } from 'react';
+import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 
-const SplashScreen = () => {
+export default function SplashScreen({ navigation }) {
+  // Animated values for fade & scale
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+
+  useEffect(() => {
+    // Animate text from invisible+smaller => visible+normal size
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 1000, // 1 second fade
+        easing: Easing.inOut(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 1000, // 1 second scale
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      // After animation completes, wait 1 second, then navigate
+      const timer = setTimeout(() => {
+        navigation.replace('MainTabs'); // navigate to 'Main' stack
+      }, 1000);
+      return () => clearTimeout(timer);
+    });
+  }, [fadeAnim, scaleAnim, navigation]);
+
   return (
-    <View>
-      <Text>SplashScreen</Text>
+    <View style={styles.container}>
+      <Animated.Text
+        style={[
+          styles.title,
+          {
+            opacity: fadeAnim,
+            transform: [{ scale: scaleAnim }],
+          },
+        ]}
+      >
+        RakshaSetu
+      </Animated.Text>
+
+      {/* Sanskrit Shloka in smaller font */}
+      <Text style={styles.shloka}>
+        यत्र नार्यस्तु पूज्यन्ते रमन्ते तत्र देवताः
+      </Text>
     </View>
-  )
+  );
 }
 
-export default SplashScreen
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#ff5f96',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  title: {
+    fontSize: 34,
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: 1.2,
+  },
+  shloka: {
+    marginTop: 10,
+    fontSize: 14,
+    color: '#fff',
+    fontStyle: 'italic',
+    textAlign: 'center',
+  },
+});
