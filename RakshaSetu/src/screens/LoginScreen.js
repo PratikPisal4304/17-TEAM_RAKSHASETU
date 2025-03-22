@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TextInput,
   TouchableOpacity,
+  Alert,
   Dimensions,
   Image,
   Modal,
@@ -14,16 +15,77 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
+
+// Firebase
+import { auth, db } from '../../config/firebaseConfig';
+import { signInWithPhoneNumber, GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
 import { useTranslation } from 'react-i18next';
+
+// Env
+import {
+  EXPO_CLIENT_ID,
+  IOS_CLIENT_ID,
+  ANDROID_CLIENT_ID,
+  WEB_CLIENT_ID,
+} from '@env';
 
 const { width, height } = Dimensions.get('window');
 const PINK = '#ff5f96';
+
+WebBrowser.maybeCompleteAuthSession();
 
 function LoginScreen({ navigation }) {
   const { t, i18n } = useTranslation();
   const [mobileNumber, setMobileNumber] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState(i18n.language || 'en');
   const [showLanguageModal, setShowLanguageModal] = useState(false);
+
+  // reCAPTCHA
+  const recaptchaVerifier = useRef(null);
+
+  // Google Auth
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    expoClientId: EXPO_CLIENT_ID,
+    iosClientId: IOS_CLIENT_ID,
+    androidClientId: ANDROID_CLIENT_ID,
+    webClientId: WEB_CLIENT_ID,
+  });
+
+  // Handle Google Sign-In response
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { idToken, accessToken } = response.authentication;
+      const credential = GoogleAuthProvider.credential(idToken, accessToken);
+
+      signInWithCredential(auth, credential)
+        .then(async (userCredential) => {
+          Alert.alert(t('login.successAlertTitle'), t('login.successAlertMessage'));
+          const { uid, email, displayName } = userCredential.user;
+
+          // Save to Firestore if needed
+          const userDocRef = doc(db, 'users', uid);
+          const userDoc = await getDoc(userDocRef);
+          if (!userDoc.exists()) {
+            await setDoc(userDocRef, {
+              email: email || '',
+              displayName: displayName || '',
+              createdAt: new Date().toISOString(),
+            });
+          }
+
+          // Move to home or main screen
+          navigation.replace('MainTabs');
+        })
+        .catch((error) => {
+          Alert.alert(t('common.error'), error.message);
+        });
+    }
+  }, [response, t, navigation]);
 
   // Language modal
   const handleLanguagePress = () => setShowLanguageModal(true);
@@ -33,14 +95,39 @@ function LoginScreen({ navigation }) {
     setShowLanguageModal(false);
   };
 
-  // Google Sign-In (static)
+  // Google Sign-In
   const handleGoogleSignIn = () => {
-    Alert.alert(t('login.googleButtonText'), 'Google Sign-In clicked (static)');
+    promptAsync();
   };
 
-  // Phone OTP (static)
-  const handleSendOTP = () => {
-    Alert.alert(t('login.sendOtpButtonText'), 'OTP Sent (static)');
+  // Phone OTP
+  const handleSendOTP = async () => {
+    if (!mobileNumber.startsWith('+91') || mobileNumber.length !== 13) {
+      Alert.alert(t('common.error'), t('login.invalidMobileError'));
+      return;
+    }
+    if (!recaptchaVerifier.current) {
+      Alert.alert(t('common.error'), t('login.recaptchaError'));
+      return;
+    }
+
+    try {
+      const confirmationResult = await signInWithPhoneNumber(
+        auth,
+        mobileNumber,
+        recaptchaVerifier.current
+      );
+      Alert.alert(t('login.otpSuccessTitle'), t('login.otpSuccessMessage', { mobile: mobileNumber }));
+
+      // Navigate to OTP screen with fromScreen = 'Login'
+      navigation.replace('OTPVerificationScreen', {
+        verificationId: confirmationResult.verificationId,
+        mobileNumber,
+        fromScreen: 'Login',
+      });
+    } catch (error) {
+      Alert.alert(t('common.error'), error.message);
+    }
   };
 
   // Language array
@@ -57,6 +144,20 @@ function LoginScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      {/* reCAPTCHA modal */}
+      <FirebaseRecaptchaVerifierModal
+        ref={recaptchaVerifier}
+        firebaseConfig={{
+          apiKey: 'AIzaSyBRD6pmrMCcuAksz8hqxXAkP8hV3jih47c',
+          authDomain: 'rakshasetu-c9e0b.firebaseapp.com',
+          projectId: 'rakshasetu-c9e0b',
+          storageBucket: 'rakshasetu-c9e0b.firebasestorage.app',
+          messagingSenderId: '704291591905',
+          appId: '1:704291591905:web:ffde7bd519cfad3106c9a0',
+        }}
+        attemptInvisibleVerification={false}
+      />
+
       <KeyboardAwareScrollView contentContainerStyle={{ flexGrow: 1 }} bounces={false}>
         <LinearGradient colors={['#ff9dbf', PINK]} style={styles.gradientBackground}>
           <View style={styles.topSection}>
@@ -91,7 +192,7 @@ function LoginScreen({ navigation }) {
             </TouchableOpacity>
 
             {/* Phone OTP */}
-            <TouchableOpacity style={styles.sendOtpButton} onPress={() => navigation.navigate('OTPVerificationScreen')}>
+            <TouchableOpacity style={styles.sendOtpButton} onPress={handleSendOTP}>
               <Text style={styles.sendOtpButtonText}>{t('login.sendOtpButtonText')}</Text>
             </TouchableOpacity>
 
@@ -140,6 +241,7 @@ function LoginScreen({ navigation }) {
     </SafeAreaView>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
