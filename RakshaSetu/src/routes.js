@@ -157,7 +157,7 @@ function MainTabs() {
 export default function Routes() {
   return (
     <>
-      <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="MainTabs">
+      <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Splash">
         <Stack.Screen name="Splash" component={SplashScreen} />
         <Stack.Screen name="MainTabs" component={MainTabs} />
       </Stack.Navigator>
