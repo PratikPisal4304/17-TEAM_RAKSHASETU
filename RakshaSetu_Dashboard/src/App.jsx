@@ -1,16 +1,17 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import Dashboard from "./pages/Dashboard";
-import Analytics from "./pages/Analytics";
-import Incidents from "./pages/Incidents";
-import Users from "./pages/Users";
-import EmergencyAlerts from "./pages/EmergencyAlerts";
-import Settings from "./pages/Settings";
 import FIR from "./pages/FIR";
+import Analytics from "./pages/Analytics";
+import EmergencyAlerts from "./pages/EmergencyAlerts";
+import Users from "./pages/Users";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+import Settings from "./pages/Settings";
+import JobListings from "./pages/JobListings";
+import CounselorsManagement from "./pages/CounselorsManagement";
 
 const App = () => {
   return (
@@ -22,7 +23,7 @@ const App = () => {
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
 
-      {/* 3) Protected routes with sidebar/header */}
+      {/* Protected routes: wrap them in your layout */}
       <Route
         path="/*"
         element={
@@ -33,13 +34,14 @@ const App = () => {
               <main className="p-3 p-md-4 overflow-auto">
                 <Routes>
                   <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/Analytics" element={<Analytics />} />
+                  <Route path="/FIR" element={<FIR />} />
+                  <Route path="/analytics" element={<Analytics />} />
                   <Route path="/emergency-alerts" element={<EmergencyAlerts />} />
-                  <Route path="/incidents" element={<Incidents />} />
                   <Route path="/users" element={<Users />} />
-                  <Route path="/settings" element={<Settings />} />
-                  <Route path="/fir" element={<FIR />} />
-                  {/* If any unknown path is visited, redirect to dashboard */}
+                  <Route path="/jobs" element={<JobListings />} />
+                  <Route path="/counselors" element={<CounselorsManagement />} />
+                  <Route path="/Settings" element={<Settings />} />
+                  {/* Add more routes as needed */}
                   <Route path="*" element={<Navigate to="/dashboard" />} />
                 </Routes>
               </main>

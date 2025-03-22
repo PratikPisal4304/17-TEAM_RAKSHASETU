@@ -2,10 +2,12 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { HiOutlineLockClosed } from "react-icons/hi2";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import { getFirestore, doc, getDoc } from "firebase/firestore";
 
 const Login = () => {
   const navigate = useNavigate();
   const auth = getAuth();
+  const db = getFirestore();
 
   // Form state
   const [email, setEmail] = useState("");
@@ -14,7 +16,7 @@ const Login = () => {
   // For basic client-side validation & error display
   const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
@@ -24,15 +26,28 @@ const Login = () => {
       return;
     }
 
-    // Firebase Authentication: sign in with email and password
-    signInWithEmailAndPassword(auth, email, password)
-      .then((userCredential) => {
-        // Successful sign in
+    try {
+      // Sign in with email and password
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      // After successful login, fetch the user role from Firestore
+      const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        // If user is admin, redirect to JobListings; otherwise, use the dashboard
+        if (userData.role === "admin") {
+          navigate("/jobs");
+        } else {
+          navigate("/dashboard");
+        }
+      } else {
+        // Fallback in case user document doesn't exist
         navigate("/dashboard");
-      })
-      .catch((err) => {
-        setError(err.message);
-      });
+      }
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   return (
@@ -43,7 +58,6 @@ const Login = () => {
       <div className="card shadow-sm p-4" style={{ maxWidth: "400px", width: "100%" }}>
         <div className="text-center mb-4">
           <div className="mb-3">
-            {/* Logo / Icon */}
             <span
               className="d-inline-flex align-items-center justify-content-center bg-danger text-white rounded-circle"
               style={{ width: "50px", height: "50px" }}
