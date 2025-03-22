@@ -12,10 +12,26 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
+import { auth, db } from '../../config/firebaseConfig';
+import { PhoneAuthProvider, signInWithCredential } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+
 const { width, height } = Dimensions.get('window');
 const PINK = '#ff5f96';
 
-export default function OTPVerificationScreen({ navigation }) {
+export default function OTPVerificationScreen({ route, navigation }) {
+  // We might have fromScreen, verificationId, phone, etc. from route.params
+  const {
+    verificationId,
+    mobileNumber,  // For Login
+    phone,         // For Signup
+    email,         // Possibly from signup
+    fromScreen,    // 'Login' or 'Signup'
+  } = route.params || {};
+
+  // If you want to unify phone usage:
+  const displayedNumber = mobileNumber || phone || '';
+
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const otpRefs = Array.from({ length: 6 }, () => useRef(null));
 
@@ -25,22 +41,62 @@ export default function OTPVerificationScreen({ navigation }) {
     updated[index] = newText;
     setOtp(updated);
 
+    // Move to next
     if (newText && index < 5) {
       otpRefs[index + 1].current?.focus();
     }
   };
 
-  const handleVerifyOTP = () => {
+  const handleVerifyOTP = async () => {
     if (otp.includes('')) {
       Alert.alert('Error', 'Please fill out all 6 digits of the OTP.');
       return;
     }
-    Alert.alert('Success', 'OTP verified!');
-    navigation.replace('MainTabs');
+    const code = otp.join('');
+
+    try {
+      const phoneCredential = PhoneAuthProvider.credential(verificationId, code);
+      const userCredential = await signInWithCredential(auth, phoneCredential);
+      const { uid, phoneNumber } = userCredential.user;
+
+      // Save user data if needed
+      const userDocRef = doc(db, 'users', uid);
+      const userDoc = await getDoc(userDocRef);
+      if (!userDoc.exists()) {
+        // If from signup, we can store the email param too
+        await setDoc(userDocRef, {
+          phone: phoneNumber, // or phone param
+          email: email || '',
+          createdAt: new Date().toISOString(),
+        });
+      }
+
+      Alert.alert('Success', 'OTP verified!');
+
+      // Decide next screen
+      if (fromScreen === 'Login') {
+        navigation.replace('MainTabs');
+      } else if (fromScreen === 'Signup') {
+        navigation.replace('TellUsAboutYourselfScreen');
+      } else {
+        // fallback
+        navigation.replace('MainTabs');
+      }
+    } catch (error) {
+      Alert.alert('Error', error.message);
+    }
   };
 
   const handleChangeNumber = () => {
-    navigation.replace('Login');
+    // Decide which screen to go back to
+    if (fromScreen === 'Login') {
+      navigation.replace('Login');
+    } else if (fromScreen === 'Signup') {
+      navigation.replace('SignUpScreen');
+    } else {
+      // fallback
+      navigation.replace('LoginScreen');
+    }
   };
 
   const handleResendCode = () => {
@@ -56,7 +112,9 @@ export default function OTPVerificationScreen({ navigation }) {
           </View>
 
           <View style={styles.formCard}>
-            <Text style={styles.subtitle}>Enter the 6-digit verification code sent to your number</Text>
+            <Text style={styles.subtitle}>
+              Enter the 6-digit verification code sent to {displayedNumber}
+            </Text>
 
             <View style={styles.otpRow}>
               {otp.map((digit, i) => (
@@ -77,7 +135,7 @@ export default function OTPVerificationScreen({ navigation }) {
               <Text style={styles.changeNumberText}>Change Number</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.verifyButton} onPress={() => navigation.navigate('MainTabs')}>
+            <TouchableOpacity style={styles.verifyButton} onPress={handleVerifyOTP}>
               <Text style={styles.verifyButtonText}>Verify OTP</Text>
             </TouchableOpacity>
 
@@ -90,6 +148,8 @@ export default function OTPVerificationScreen({ navigation }) {
     </SafeAreaView>
   );
 }
+
+const CARD_HEIGHT = 320;
 
 const styles = StyleSheet.create({
   container: {
@@ -115,7 +175,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 40,
     padding: 25,
-    minHeight: 320,
+    minHeight: CARD_HEIGHT,
     marginTop: 20,
     marginHorizontal: 15,
     shadowColor: '#000',

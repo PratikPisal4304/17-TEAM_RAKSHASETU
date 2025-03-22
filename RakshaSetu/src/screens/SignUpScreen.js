@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,14 +15,32 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+
+// Firebase
+import { GoogleAuthProvider, signInWithCredential, signInWithPhoneNumber } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { auth, db } from '../../config/firebaseConfig';
+
+// reCAPTCHA for Phone Auth
+import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
+
+// Expo Auth Session & WebBrowser for Google Sign-In
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
+
 import { useTranslation } from 'react-i18next';
+import { WEB_CLIENT_ID } from '@env';
 
 const { width, height } = Dimensions.get('window');
 const PINK = '#ff5f96';
 
+WebBrowser.maybeCompleteAuthSession();
+
 function SignUpScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+
+  const recaptchaVerifier = useRef(null);
 
   const { t, i18n } = useTranslation();
   const [selectedLanguage, setSelectedLanguage] = useState(i18n.language || 'en');
@@ -38,6 +56,44 @@ function SignUpScreen({ navigation }) {
     { label: 'ਪੰਜਾਬੀ', value: 'pa' },
   ];
 
+  useEffect(() => {
+    console.log('i18n object:', i18n);
+  }, [i18n]);
+
+  // Google Auth
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    webClientId: WEB_CLIENT_ID,
+    iosClientId: WEB_CLIENT_ID,
+    androidClientId: WEB_CLIENT_ID,
+    responseType: 'id_token',
+  });
+
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { idToken, accessToken } = response.authentication;
+      const credential = GoogleAuthProvider.credential(idToken, accessToken);
+
+      signInWithCredential(auth, credential)
+        .then(async (userCredential) => {
+          const user = userCredential.user;
+          await setDoc(
+            doc(db, 'users', user.uid),
+            {
+              email: user.email,
+              phone: user.phoneNumber || '',
+              createdAt: new Date(),
+            },
+            { merge: true }
+          );
+          Alert.alert(t('signup.successAlertTitle'), t('signup.successAlertMessage'));
+          navigation.replace('TellUsAboutYourselfScreen');
+        })
+        .catch((error) => {
+          Alert.alert(t('common.error'), error.message);
+        });
+    }
+  }, [response, t, navigation]);
+
   // Language modal
   const handleLanguagePress = () => setShowLanguageModal(true);
   const handleSelectLanguage = (lang) => {
@@ -46,14 +102,40 @@ function SignUpScreen({ navigation }) {
     setShowLanguageModal(false);
   };
 
-  // Google Sign-In (static)
+  // Google Sign-In
   const handleGoogleSignIn = () => {
-    Alert.alert(t('signup.googleButtonText'), 'Google Sign-In clicked (static)');
+    promptAsync();
   };
 
-  // Send OTP (static)
-  const handleSendOTP = () => {
-    Alert.alert(t('login.sendOtpButtonText'), 'OTP Sent (static)');
+  // Send OTP (no password)
+  const handleSendOTP = async () => {
+    if (!email.trim() || !phone.trim()) {
+      Alert.alert(t('common.error'), t('signup.allFieldsRequired'));
+      return;
+    }
+    if (!phone.startsWith('+91') || phone.length !== 13) {
+      Alert.alert(t('common.error'), t('signup.invalidPhoneError'));
+      return;
+    }
+    if (!recaptchaVerifier.current) {
+      Alert.alert(t('common.error'), 'reCAPTCHA not ready');
+      return;
+    }
+
+    try {
+      const confirmationResult = await signInWithPhoneNumber(auth, phone, recaptchaVerifier.current);
+      Alert.alert(t('login.otpSuccessTitle'), t('login.otpSuccessMessage', { mobile: phone }));
+
+      // fromScreen = 'Signup'
+      navigation.replace('OTPVerificationScreen', {
+        verificationId: confirmationResult.verificationId,
+        phone,
+        email,
+        fromScreen: 'Signup',
+      });
+    } catch (error) {
+      Alert.alert(t('common.error'), error.message);
+    }
   };
 
   const handleGoToLogin = () => {
@@ -62,6 +144,19 @@ function SignUpScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      <FirebaseRecaptchaVerifierModal
+        ref={recaptchaVerifier}
+        firebaseConfig={{
+          apiKey: 'AIzaSyBRD6pmrMCcuAksz8hqxXAkP8hV3jih47c',
+          authDomain: 'rakshasetu-c9e0b.firebaseapp.com',
+          projectId: 'rakshasetu-c9e0b',
+          storageBucket: 'rakshasetu-c9e0b.firebasestorage.app',
+          messagingSenderId: '704291591905',
+          appId: '1:704291591905:web:ffde7bd519cfad3106c9a0',
+        }}
+        attemptInvisibleVerification={false}
+      />
+
       <KeyboardAwareScrollView contentContainerStyle={{ flexGrow: 1 }} bounces={false}>
         <LinearGradient colors={['#ff9dbf', PINK]} style={styles.gradientBackground}>
           <View style={styles.topSection}>
@@ -104,7 +199,7 @@ function SignUpScreen({ navigation }) {
             </TouchableOpacity>
 
             {/* Phone OTP */}
-            <TouchableOpacity style={styles.signUpButton} onPress={() => navigation.navigate('OTPVerificationScreen')}>
+            <TouchableOpacity style={styles.signUpButton} onPress={handleSendOTP}>
               <Text style={styles.signUpButtonText}>{t('login.sendOtpButtonText')}</Text>
             </TouchableOpacity>
 
