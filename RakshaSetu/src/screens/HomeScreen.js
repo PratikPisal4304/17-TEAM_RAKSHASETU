@@ -1,46 +1,55 @@
-import React, { useState, useEffect, useRef } from 'react';
+// src/screens/HomeScreen.js
+
+import { FontAwesome5, Ionicons } from "@expo/vector-icons";
+import * as Location from "expo-location";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  orderBy,
+  query,
+  updateDoc,
+  writeBatch,
+} from "firebase/firestore";
+import React, { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import {
+  ActivityIndicator,
+  Alert,
+  Animated,
   Image,
-  StatusBar,
-  ScrollView,
   Linking,
   Modal,
-  Animated,
+  ScrollView,
+  Share,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
   TouchableWithoutFeedback,
-} from 'react-native';
-import { 
-  collection, 
-  query, 
-  getDocs, 
-  updateDoc, 
-  writeBatch, 
-  orderBy 
-} from 'firebase/firestore';
-import { ActivityIndicator } from 'react-native';
-import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import * as Location from 'expo-location';
-import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from '../../config/firebaseConfig'; // adjust path if needed
-import { useTranslation } from 'react-i18next';
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { auth, db } from "../../config/firebaseConfig";
 
-const PINK = '#ff5f96';
+const PINK = "#ff5f96";
 
 const HomeScreen = ({ navigation }) => {
   const { t } = useTranslation();
-  const [username, setUsername] = useState('Lucy Patil'); // fallback
+  const [username, setUsername] = useState("Lucy Patil"); // fallback name
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [notificationModalVisible, setNotificationModalVisible] = useState(false);
 
-  // Animated values for scale and opacity
+  // Notifications state
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+
+  // Animated modal values for notifications
   const modalScale = useRef(new Animated.Value(0)).current;
   const modalOpacity = useRef(new Animated.Value(0)).current;
 
-  // Animate modal when visibility changes
   useEffect(() => {
     if (notificationModalVisible) {
       Animated.parallel([
@@ -71,13 +80,13 @@ const HomeScreen = ({ navigation }) => {
     }
   }, [notificationModalVisible]);
 
-  // Fetch user data from Firestore on mount
+  // Fetch user data from Firestore
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
     (async () => {
       try {
-        const docRef = doc(db, 'users', user.uid);
+        const docRef = doc(db, "users", user.uid);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const data = docSnap.data();
@@ -85,98 +94,81 @@ const HomeScreen = ({ navigation }) => {
           if (data.avatarUrl) setAvatarUrl(data.avatarUrl);
         }
       } catch (error) {
-        console.log('Error fetching user data:', error.message);
+        console.log("Error fetching user data:", error.message);
       }
     })();
   }, []);
-  // Add this to your state declarations
-const [notifications, setNotifications] = useState([]);
-const [loading, setLoading] = useState(false);
 
-// Add this function to fetch notifications
-const fetchNotifications = async () => {
-  setLoading(true);
-  try {
-    const user = auth.currentUser;
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-    
-    // Query your notifications collection
-    const notificationsRef = collection(db, 'users', user.uid, 'notifications');
-    const q = query(notificationsRef, orderBy('timestamp', 'desc'));
-    const querySnapshot = await getDocs(q);
-    
-    const notificationData = [];
-    querySnapshot.forEach((doc) => {
-      notificationData.push({
-        id: doc.id,
-        ...doc.data(),
+  const fetchNotifications = async () => {
+    setLoading(true);
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+      const notificationsRef = collection(db, "users", user.uid, "notifications");
+      const q = query(notificationsRef, orderBy("timestamp", "desc"));
+      const querySnapshot = await getDocs(q);
+      const notificationData = [];
+      querySnapshot.forEach((docSnap) => {
+        notificationData.push({
+          id: docSnap.id,
+          ...docSnap.data(),
+        });
       });
-    });
-    
-    setNotifications(notificationData);
-  } catch (error) {
-    console.log('Error fetching notifications:', error);
-  } finally {
-    setLoading(false);
-  }
-};
+      setNotifications(notificationData);
+    } catch (error) {
+      console.log("Error fetching notifications:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-// Add this useEffect to fetch notifications when modal opens
-useEffect(() => {
-  if (notificationModalVisible) {
-    fetchNotifications();
-  }
-}, [notificationModalVisible]);
+  useEffect(() => {
+    if (notificationModalVisible) {
+      fetchNotifications();
+    }
+  }, [notificationModalVisible]);
 
-// Add this function to mark notification as read
-const markAsRead = async (notificationId) => {
-  try {
-    const user = auth.currentUser;
-    if (!user) return;
-    
-    const notificationRef = doc(db, 'users', user.uid, 'notifications', notificationId);
-    await updateDoc(notificationRef, {
-      read: true
-    });
-    
-    // Update local state
-    setNotifications(notifications.map(item => 
-      item.id === notificationId ? {...item, read: true} : item
-    ));
-  } catch (error) {
-    console.log('Error marking notification as read:', error);
-  }
-};
+  const markAsRead = async (notificationId) => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+      const notificationRef = doc(db, "users", user.uid, "notifications", notificationId);
+      await updateDoc(notificationRef, { read: true });
+      setNotifications(
+        notifications.map((item) =>
+          item.id === notificationId ? { ...item, read: true } : item
+        )
+      );
+    } catch (error) {
+      console.log("Error marking notification as read:", error);
+    }
+  };
 
-// Add this function to clear all notifications
-const clearAllNotifications = async () => {
-  try {
-    const user = auth.currentUser;
-    if (!user) return;
-    
-    const batch = writeBatch(db);
-    const notificationsRef = collection(db, 'users', user.uid, 'notifications');
-    const querySnapshot = await getDocs(notificationsRef);
-    
-    querySnapshot.forEach((doc) => {
-      batch.delete(doc.ref);
-    });
-    
-    await batch.commit();
-    setNotifications([]);
-  } catch (error) {
-    console.log('Error clearing notifications:', error);
-  }
-};
+  const clearAllNotifications = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+      const batch = writeBatch(db);
+      const notificationsRef = collection(db, "users", user.uid, "notifications");
+      const querySnapshot = await getDocs(notificationsRef);
+      querySnapshot.forEach((docSnap) => {
+        batch.delete(docSnap.ref);
+      });
+      await batch.commit();
+      setNotifications([]);
+    } catch (error) {
+      console.log("Error clearing notifications:", error);
+    }
+  };
 
   const openNearbyPoliceStations = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        alert(t('home.permissionDenied'));
+      if (status !== "granted") {
+        alert(t("home.permissionDenied"));
         return;
       }
       const currentLocation = await Location.getCurrentPositionAsync({});
@@ -184,15 +176,15 @@ const clearAllNotifications = async () => {
       const googleMapsURL = `https://www.google.com/maps/search/police+station/@${latitude},${longitude},15z`;
       await Linking.openURL(googleMapsURL);
     } catch (error) {
-      console.error('Error fetching location:', error);
+      console.error("Error fetching location:", error);
     }
   };
 
   const openNearbyHospitals = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        alert(t('home.permissionDenied'));
+      if (status !== "granted") {
+        alert(t("home.permissionDenied"));
         return;
       }
       const currentLocation = await Location.getCurrentPositionAsync({});
@@ -200,15 +192,15 @@ const clearAllNotifications = async () => {
       const googleMapsURL = `https://www.google.com/maps/search/hospital/@${latitude},${longitude},15z`;
       await Linking.openURL(googleMapsURL);
     } catch (error) {
-      console.error('Error fetching location:', error);
+      console.error("Error fetching location:", error);
     }
   };
 
   const openNearbyPharmacies = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        alert(t('home.permissionDenied'));
+      if (status !== "granted") {
+        alert(t("home.permissionDenied"));
         return;
       }
       const currentLocation = await Location.getCurrentPositionAsync({});
@@ -216,99 +208,139 @@ const clearAllNotifications = async () => {
       const googleMapsURL = `https://www.google.com/maps/search/pharmacy/@${latitude},${longitude},15z`;
       await Linking.openURL(googleMapsURL);
     } catch (error) {
-      console.error('Error fetching location:', error);
+      console.error("Error fetching location:", error);
     }
   };
 
+  // ===== Location Sharing =====
+  // Single button triggers an alert with two options:
+  // "Live Location" navigates to LiveLocationScreen with a default timer (1 minute).
+  // "Current Location" shares a one-time location.
+  const handleShareLocation = () => {
+    Alert.alert("Share Location", "Choose sharing option", [
+      {
+        text: "Live Location",
+        onPress: () =>
+          navigation.navigate("LiveLocationScreen", { duration: 1 }),
+      },
+      {
+        text: "Current Location",
+        onPress: shareCurrentLocation,
+      },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
+
+  // One-time share current location
+  const shareCurrentLocation = async () => {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== "granted") {
+      alert(t("home.permissionDenied"));
+      return;
+    }
+    const currentLocation = await Location.getCurrentPositionAsync({});
+    const { latitude, longitude } = currentLocation.coords;
+    const link = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+    Share.share({
+      message: `Here's my current location: ${link}`,
+    });
+  };
+
   return (
-    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+    <SafeAreaView style={styles.container} edges={["left", "right"]}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
       {/* Notification Modal */}
-{/* Notification Modal */}
-<Modal
-  transparent={true}
-  visible={notificationModalVisible}
-  onRequestClose={() => setNotificationModalVisible(false)}
-  animationType="none"
->
-  <TouchableWithoutFeedback onPress={() => setNotificationModalVisible(false)}>
-    <View style={styles.modalOverlay}>
-      <Animated.View
-        style={[
-          styles.modalContainer,
-          {
-            transform: [{ scale: modalScale }],
-            opacity: modalOpacity,
-          },
-        ]}
+      <Modal
+        transparent={true}
+        visible={notificationModalVisible}
+        onRequestClose={() => setNotificationModalVisible(false)}
+        animationType="none"
       >
-        <View style={styles.notificationHeader}>
-          <Ionicons name="notifications" size={20} color="#fff" />
-          <Text style={styles.notificationHeaderText}>Notifications</Text>
-        </View>
-        
-        <ScrollView style={styles.notificationBody}>
-          {loading ? (
-            <ActivityIndicator color={PINK} size="small" style={{ padding: 20 }} />
-          ) : notifications.length > 0 ? (
-            notifications.map((notification) => (
-              <TouchableOpacity 
-                key={notification.id}
-                style={[
-                  styles.notificationItem,
-                  { backgroundColor: notification.read ? '#F8F8F8' : '#FFF0F5' }
-                ]}
-                onPress={() => markAsRead(notification.id)}
-              >
-                <Text style={styles.notificationTitle}>{notification.title}</Text>
-                <Text style={styles.notificationMessage}>{notification.message}</Text>
-                <Text style={styles.notificationTime}>
-                  {notification.timestamp?.toDate().toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })} · {notification.timestamp?.toDate().toLocaleDateString()}
-                </Text>
-              </TouchableOpacity>
-            ))
-          ) : (
-            <View style={styles.emptyNotification}>
-              <Ionicons name="notifications-off-outline" size={40} color="#DDD" />
-              <Text style={styles.emptyNotificationText}>No new notifications</Text>
-            </View>
-          )}
-        </ScrollView>
-        
-        <View style={{ flexDirection: 'row' }}>
-          {notifications.length > 0 && (
-            <TouchableOpacity 
-              style={[styles.closeButton, { flex: 1, borderRightWidth: 1, borderRightColor: '#EEE' }]}
-              onPress={clearAllNotifications}
+        <TouchableWithoutFeedback onPress={() => setNotificationModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <Animated.View
+              style={[
+                styles.modalContainer,
+                { transform: [{ scale: modalScale }], opacity: modalOpacity },
+              ]}
             >
-              <Text style={styles.closeButtonText}>Clear All</Text>
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity 
-            style={[styles.closeButton, { flex: 1 }]}
-            onPress={() => setNotificationModalVisible(false)}
-          >
-            <Text style={styles.closeButtonText}>Dismiss</Text>
-          </TouchableOpacity>
-        </View>
-      </Animated.View>
-    </View>
-  </TouchableWithoutFeedback>
-</Modal>
+              <View style={styles.notificationHeader}>
+                <Ionicons name="notifications" size={20} color="#fff" />
+                <Text style={styles.notificationHeaderText}>
+                  {t("notifications.header")}
+                </Text>
+              </View>
+              <ScrollView style={styles.notificationBody}>
+                {loading ? (
+                  <ActivityIndicator color={PINK} size="small" style={{ padding: 20 }} />
+                ) : notifications.length > 0 ? (
+                  notifications.map((notification) => (
+                    <TouchableOpacity
+                      key={notification.id}
+                      style={[
+                        styles.notificationItem,
+                        { backgroundColor: notification.read ? "#F8F8F8" : "#FFF0F5" },
+                      ]}
+                      onPress={() => markAsRead(notification.id)}
+                    >
+                      <Text style={styles.notificationTitle}>{notification.title}</Text>
+                      <Text style={styles.notificationMessage}>{notification.message}</Text>
+                      <Text style={styles.notificationTime}>
+                        {notification.timestamp?.toDate().toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}{" "}
+                        · {notification.timestamp?.toDate().toLocaleDateString()}
+                      </Text>
+                    </TouchableOpacity>
+                  ))
+                ) : (
+                  <View style={styles.emptyNotification}>
+                    <Ionicons name="notifications-off-outline" size={40} color="#DDD" />
+                    <Text style={styles.emptyNotificationText}>
+                      {t("notifications.empty")}
+                    </Text>
+                  </View>
+                )}
+              </ScrollView>
+              <View style={{ flexDirection: "row" }}>
+                {notifications.length > 0 && (
+                  <TouchableOpacity
+                    style={[
+                      styles.closeButton,
+                      { flex: 1, borderRightWidth: 1, borderRightColor: "#EEE" },
+                    ]}
+                    onPress={clearAllNotifications}
+                  >
+                    <Text style={styles.closeButtonText}>{t("notifications.clearAll")}</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={[styles.closeButton, { flex: 1 }]}
+                  onPress={() => setNotificationModalVisible(false)}
+                >
+                  <Text style={styles.closeButtonText}>{t("notifications.dismiss")}</Text>
+                </TouchableOpacity>
+              </View>
+            </Animated.View>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
 
       <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}>
-        {/* Pink Header with Curve */}
+        {/* Header */}
         <View style={styles.header}>
           <View style={styles.userInfo}>
             <Image
-              source={avatarUrl ? { uri: avatarUrl } : require('../../assets/icon.png')}
+              source={
+                avatarUrl
+                  ? { uri: avatarUrl }
+                  : require("../../assets/icon.png")
+              }
               style={styles.avatar}
             />
-            <Text style={styles.greeting}>{t('home.greeting')}</Text>
+            <Text style={styles.greeting}>{t("home.greeting")}</Text>
             <Text style={styles.username}>{username}</Text>
           </View>
           <View style={styles.headerIcons}>
@@ -320,54 +352,63 @@ const clearAllNotifications = async () => {
 
         {/* Quick Actions */}
         <View style={styles.quickActions}>
-          <TouchableOpacity onPress={() => navigation.navigate('FakeCall')} style={styles.actionButton}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate("FakeCall")}
+            style={styles.actionButton}
+          >
             <Image
-              source={require('../../assets/fake-call.png')}
+              source={require("../../assets/fake-call.png")}
               style={styles.actionIcon}
             />
-            <Text style={styles.actionText}>{t('home.fakeCall')}</Text>
+            <Text style={styles.actionText}>{t("home.fakeCall")}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={handleShareLocation}
+          >
             <Image
-              source={require('../../assets/livelocation.png')}
+              source={require("../../assets/livelocation.png")}
               style={styles.actionIcon}
             />
-            <Text style={styles.actionText}>{t('home.shareLiveLocation')}</Text>
+            <Text style={styles.actionText}>{t("home.shareLiveLocation")}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Add Close People Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{t('home.addClosePeopleTitle')}</Text>
-            <Text style={styles.sectionSubtitle}>{t('home.addClosePeopleSubtitle')}</Text>
+            <Text style={styles.sectionTitle}>{t("home.addClosePeopleTitle")}</Text>
+            <Text style={styles.sectionSubtitle}>{t("home.addClosePeopleSubtitle")}</Text>
           </View>
-          <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('AddFriends')}>
-            <Text style={styles.addButtonText}>{t('home.addFriendsButton')}</Text>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => navigation.navigate("AddFriends")}
+          >
+            <Text style={styles.addButtonText}>{t("home.addFriendsButton")}</Text>
             <Ionicons name="person-add" size={20} color="white" />
           </TouchableOpacity>
         </View>
 
         {/* Skill Development Section */}
-        <TouchableOpacity 
-          style={styles.skillSection} 
-          onPress={() => navigation.navigate('SkillDevelopment')}
+        <TouchableOpacity
+          style={styles.skillSection}
+          onPress={() => navigation.navigate("SkillDevelopment")}
         >
           <View style={styles.skillContent}>
             <View style={styles.skillIconContainer}>
               <Image
-                source={require('../../assets/skill.png')}
+                source={require("../../assets/skill.png")}
                 style={styles.skillIcon}
               />
             </View>
             <View style={styles.skillTextContainer}>
-              <Text style={styles.skillTitle}>{t('home.skillTitle')}</Text>
-              <Text style={styles.skillSubtitle}>{t('home.skillSubtitle')}</Text>
+              <Text style={styles.skillTitle}>{t("home.skillTitle")}</Text>
+              <Text style={styles.skillSubtitle}>{t("home.skillSubtitle")}</Text>
               <View style={styles.skillProgress}>
                 <View style={styles.progressBar}>
                   <View style={styles.progressFill} />
                 </View>
-                <Text style={styles.progressText}>{t('home.skillProgressText')}</Text>
+                <Text style={styles.progressText}>{t("home.skillProgressText")}</Text>
               </View>
             </View>
           </View>
@@ -377,49 +418,64 @@ const clearAllNotifications = async () => {
         </TouchableOpacity>
 
         {/* AI Report Generator Section */}
-        <TouchableOpacity style={styles.journeySection} onPress={() => navigation.navigate('GenerateReport')}> 
+        <TouchableOpacity
+          style={styles.journeySection}
+          onPress={() => navigation.navigate("GenerateReport")}
+        >
           <View style={styles.journeyContent}>
             <Image
-              source={require('../../assets/report.png')}
+              source={require("../../assets/report.png")}
               style={styles.journeyIcon}
             />
             <View>
-              <Text style={styles.journeyTitle}>{t('home.generateReportTitle')}</Text>
-              <Text style={styles.journeySubtitle}>{t('home.generateReportSubtitle')}</Text>
+              <Text style={styles.journeyTitle}>{t("home.generateReportTitle")}</Text>
+              <Text style={styles.journeySubtitle}>{t("home.generateReportSubtitle")}</Text>
             </View>
           </View>
           <Ionicons name="chevron-forward" size={24} color="black" />
         </TouchableOpacity>
 
         {/* Journey Section */}
-        <TouchableOpacity style={styles.journeySection} onPress={() => navigation.navigate('TrackMe')}>
+        <TouchableOpacity
+          style={styles.journeySection}
+          onPress={() => navigation.navigate("TrackMe")}
+        >
           <View style={styles.journeyContent}>
             <Image
-              source={require('../../assets/journey.png')}
+              source={require("../../assets/journey.png")}
               style={styles.journeyIcon}
             />
             <View>
-              <Text style={styles.journeyTitle}>{t('home.journeyTitle')}</Text>
-              <Text style={styles.journeySubtitle}>{t('home.journeySubtitle')}</Text>
+              <Text style={styles.journeyTitle}>{t("home.journeyTitle")}</Text>
+              <Text style={styles.journeySubtitle}>{t("home.journeySubtitle")}</Text>
             </View>
           </View>
           <Ionicons name="chevron-forward" size={24} color="black" />
         </TouchableOpacity>
 
         {/* Emergency Buttons */}
-        <TouchableOpacity style={styles.emergencyButton} onPress={openNearbyPoliceStations}>
+        <TouchableOpacity
+          style={styles.emergencyButton}
+          onPress={openNearbyPoliceStations}
+        >
           <FontAwesome5 name="shield-alt" size={20} color="black" />
-          <Text style={styles.emergencyText}>{t('home.policeNearMe')}</Text>
+          <Text style={styles.emergencyText}>{t("home.policeNearMe")}</Text>
           <Ionicons name="chevron-forward" size={24} color="black" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.emergencyButton} onPress={openNearbyHospitals}>
+        <TouchableOpacity
+          style={styles.emergencyButton}
+          onPress={openNearbyHospitals}
+        >
           <FontAwesome5 name="hospital" size={20} color="black" />
-          <Text style={styles.emergencyText}>{t('home.hospitalNearMe')}</Text>
+          <Text style={styles.emergencyText}>{t("home.hospitalNearMe")}</Text>
           <Ionicons name="chevron-forward" size={24} color="black" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.emergencyButton} onPress={openNearbyPharmacies}>
+        <TouchableOpacity
+          style={styles.emergencyButton}
+          onPress={openNearbyPharmacies}
+        >
           <FontAwesome5 name="clinic-medical" size={20} color="black" />
-          <Text style={styles.emergencyText}>{t('home.pharmacyNearMe')}</Text>
+          <Text style={styles.emergencyText}>{t("home.pharmacyNearMe")}</Text>
           <Ionicons name="chevron-forward" size={24} color="black" />
         </TouchableOpacity>
       </ScrollView>
@@ -430,10 +486,7 @@ const clearAllNotifications = async () => {
 export default HomeScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFF',
-  },
+  container: { flex: 1, backgroundColor: "#FFF" },
   header: {
     backgroundColor: PINK,
     borderBottomLeftRadius: 40,
@@ -442,105 +495,66 @@ const styles = StyleSheet.create({
     paddingTop: 70,
     paddingBottom: 40,
     marginBottom: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
-  userInfo: {
-    flexDirection: 'column',
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-  },
-  greeting: {
-    fontSize: 16,
-    color: '#666',
-  },
-  username: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  headerIcons: {
-    flexDirection: 'row',
-    gap: 15,
-  },
-  quickActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    padding: 20,
-  },
+  userInfo: { flexDirection: "column" },
+  avatar: { width: 40, height: 40, borderRadius: 20 },
+  greeting: { fontSize: 16, color: "#666" },
+  username: { fontSize: 24, fontWeight: "bold", color: "#000" },
+  headerIcons: { flexDirection: "row", gap: 15 },
+  quickActions: { flexDirection: "row", justifyContent: "space-around", padding: 20 },
   actionButton: {
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     padding: 20,
     borderRadius: 15,
-    alignItems: 'center',
-    width: '45%',
-    shadowColor: '#000',
+    alignItems: "center",
+    width: "45%",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
-  actionIcon: {
-    width: 40,
-    height: 40,
-    marginBottom: 10,
-  },
-  actionText: {
-    textAlign: 'center',
-    color: '#000',
-  },
+  actionIcon: { width: 40, height: 40, marginBottom: 10 },
+  actionText: { textAlign: "center", color: "#000" },
   section: {
     padding: 20,
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     borderRadius: 15,
     marginHorizontal: 20,
     marginVertical: 10,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
-  sectionHeader: {
-    marginBottom: 10,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  sectionSubtitle: {
-    color: '#666',
-    fontSize: 14,
-  },
+  sectionHeader: { marginBottom: 10 },
+  sectionTitle: { fontSize: 18, fontWeight: "bold", color: "#000" },
+  sectionSubtitle: { color: "#666", fontSize: 14 },
   addButton: {
-    backgroundColor: '#FF4B8C',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#FF4B8C",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     padding: 10,
     borderRadius: 25,
     gap: 10,
     marginTop: 10,
   },
-  addButtonText: {
-    color: '#FFF',
-    fontWeight: '500',
-  },
+  addButtonText: { color: "#FFF", fontWeight: "500" },
   skillSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     padding: 15,
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     borderRadius: 15,
     marginHorizontal: 20,
     marginVertical: 10,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -548,119 +562,71 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: PINK,
   },
-  skillContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  skillIconContainer: {
-    backgroundColor: PINK + '15',
-    padding: 10,
-    borderRadius: 12,
-    marginRight: 15,
-  },
-  skillIcon: {
-    width: 40,
-    height: 40,
-  },
-  skillTextContainer: {
-    flex: 1,
-  },
-  skillTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 4,
-  },
-  skillSubtitle: {
-    color: '#666',
-    fontSize: 13,
-    lineHeight: 18,
-    marginBottom: 8,
-  },
-  skillProgress: {
-    width: '100%',
-    marginTop: 5,
-  },
-  progressBar: {
-    height: 6,
-    backgroundColor: '#F0F0F0',
-    borderRadius: 3,
-    width: '100%',
-    marginBottom: 5,
-  },
-  progressFill: {
-    height: '100%',
-    width: '40%',
-    backgroundColor: PINK,
-    borderRadius: 3,
-  },
-  progressText: {
-    fontSize: 12,
-    color: '#888',
-  },
-  skillArrowContainer: {
-    backgroundColor: PINK + '10',
-    padding: 8,
-    borderRadius: 20,
-  },
+  skillContent: { flexDirection: "row", alignItems: "center", flex: 1 },
+  skillIconContainer: { backgroundColor: PINK + "15", padding: 10, borderRadius: 12, marginRight: 15 },
+  skillIcon: { width: 40, height: 40 },
+  skillTextContainer: { flex: 1 },
+  skillTitle: { fontSize: 18, fontWeight: "bold", color: "#000", marginBottom: 4 },
+  skillSubtitle: { color: "#666", fontSize: 13, lineHeight: 18, marginBottom: 8 },
+  skillProgress: { width: "100%", marginTop: 5 },
+  progressBar: { height: 6, backgroundColor: "#F0F0F0", borderRadius: 3, width: "100%", marginBottom: 5 },
+  progressFill: { height: "100%", width: "40%", backgroundColor: PINK, borderRadius: 3 },
+  progressText: { fontSize: 12, color: "#888" },
+  skillArrowContainer: { backgroundColor: PINK + "10", padding: 8, borderRadius: 20 },
   journeySection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     padding: 20,
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     borderRadius: 15,
     marginHorizontal: 20,
     marginVertical: 10,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
-  journeyContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  journeyIcon: {
-    width: 40,
-    height: 40,
-    marginRight: 15,
-  },
-  journeyTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  journeySubtitle: {
-    color: '#666',
-    fontSize: 12,
-  },
-  emergencyButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  journeyContent: { flexDirection: "row", alignItems: "center", flex: 1 },
+  journeyIcon: { width: 40, height: 40, marginRight: 15 },
+  journeyTitle: { fontSize: 18, fontWeight: "bold", color: "#000" },
+  journeySubtitle: { color: "#666", fontSize: 12 },
+  jobMarketSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     padding: 20,
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
+    borderRadius: 15,
+    marginHorizontal: 20,
+    marginVertical: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  jobMarketContent: { flexDirection: "row", alignItems: "center", flex: 1 },
+  jobMarketIcon: { width: 40, height: 40, marginRight: 15 },
+  jobMarketTitle: { fontSize: 18, fontWeight: "bold", color: "#000" },
+  jobMarketSubtitle: { color: "#666", fontSize: 12 },
+  emergencyButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 20,
+    backgroundColor: "#FFF",
     borderRadius: 15,
     marginHorizontal: 20,
     marginVertical: 5,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
-  emergencyText: {
-    flex: 1,
-    marginLeft: 15,
-    fontSize: 16,
-    color: '#000',
-  },
-  // Modal styles
-// Updated modal styling for a softer, more modern look
+  emergencyText: { flex: 1, marginLeft: 15, fontSize: 16, color: "#000" },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.4)',

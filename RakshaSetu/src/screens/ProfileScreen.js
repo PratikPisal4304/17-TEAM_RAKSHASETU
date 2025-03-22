@@ -14,6 +14,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../../config/firebaseConfig';
 import { ShakeDetectionContext } from '../../src/context/ShakeDetectionContext';
+import { VoiceDetectionContext } from '../../src/context/VoiceDetectionContext';
 import { useTranslation } from 'react-i18next';
 
 const languageMapping = {
@@ -87,6 +88,7 @@ const ProfileScreen = ({ navigation }) => {
   const [phone, setPhone] = useState('+91 12345 678910');
   const [isLoading, setIsLoading] = useState(true);
   const { isShakeEnabled, setIsShakeEnabled } = useContext(ShakeDetectionContext);
+  const { isVoiceEnabled, setIsVoiceEnabled } = useContext(VoiceDetectionContext);
 
   const preferences = [
     { title: t('profile.myPosts'), icon: 'account', screen: 'MyPosts' },
@@ -222,6 +224,12 @@ const ProfileScreen = ({ navigation }) => {
             icon="gesture-swipe"
             value={isShakeEnabled}
             onValueChange={(value) => setIsShakeEnabled(value)}
+          />
+          <ToggleSetting
+            title={t('profile.enableVoice')}  // Make sure to add an appropriate translation key, e.g., "Enable Voice Activation"
+            icon="microphone"
+            value={isVoiceEnabled}
+            onValueChange={(value) => setIsVoiceEnabled(value)}
           />
         </View>
 

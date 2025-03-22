@@ -37,6 +37,7 @@
     "firebase": "^11.5.0",
     "html-parse-stringify": "^3.0.1",
     "i18next": "^24.2.3",
+    "rakshasetu": "file:",
     "react": "18.3.1",
     "react-i18next": "^15.4.1",
     "react-native": "0.76.7",
