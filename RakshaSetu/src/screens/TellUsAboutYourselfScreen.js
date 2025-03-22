@@ -1,4 +1,3 @@
-// TellUsAboutYourselfScreen.js
 import React, { useState } from 'react';
 import {
   View,
@@ -17,10 +16,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 // 1) Firebase imports
 import { auth, db } from '../../config/firebaseConfig';  // <-- Adjust path
 import { doc, updateDoc } from 'firebase/firestore';      // For writing to Firestore
-
-// 1) Firebase imports
-import { doc, updateDoc } from 'firebase/firestore'; // For writing to Firestore
-import { auth, db } from '../../config/firebaseConfig'; // <-- Adjust path
 
 const { width, height } = Dimensions.get('window');
 const PINK = '#ff5f96';

@@ -21,7 +21,8 @@ import SOSScreen from "./screens/SOSScreen";
 import ProfileScreen from "./screens/ProfileScreen";
 import EditProfileScreen from "./screens/EditProfileScreen";
 import EmergencyHelplineScreen from "./screens/EmergencyHelplineScreen";
-import CommunityScreen from "./screens/CommunityScreen"; 
+import CommunityScreen from "./screens/CommunityScreen";
+import GenerateReportScreen from "./screens/GenerateReportScreen"; 
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -40,6 +41,7 @@ function HomeStack() {
       <Stack.Screen name="FakeCall" component={FakeCallScreen} />
       <Stack.Screen name="AddFriends" component={AddFriendsScreen} />
       <Stack.Screen name="TrackMe" component={TrackMeScreen} />
+      <Stack.Screen name="GenerateReport" component={GenerateReportScreen} />
     </Stack.Navigator>
   );
 }
