@@ -13,6 +13,7 @@ import CommunityScreen from "./screens/CommunityScreen";
 import EditProfileScreen from "./screens/EditProfileScreen";
 import EmergencyHelplineScreen from "./screens/EmergencyHelplineScreen";
 import FakeCallScreen from "./screens/FakeCallScreen";
+import GeminiChatScreen from "./screens/GeminiChatScreen";
 import GenerateReportScreen from "./screens/GenerateReportScreen";
 import HomeScreen from "./screens/HomeScreen";
 import LoginScreen from "./screens/LoginScreen";
@@ -26,7 +27,6 @@ import SOSScreen from "./screens/SOSScreen";
 import SplashScreen from "./screens/SplashScreen";
 import TellUsAboutYourselfScreen from "./screens/TellUsAboutYourselfScreen";
 import TrackMeScreen from "./screens/TrackMeScreen";
- 
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -68,6 +68,7 @@ function CommunityStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="CommunityMain" component={CommunityScreen} />
+      <Stack.Screen name="GeminiChat" component={GeminiChatScreen} />
     </Stack.Navigator>
   );
 }
