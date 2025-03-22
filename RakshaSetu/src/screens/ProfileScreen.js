@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,9 @@ import {
   Switch,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { auth, db } from '../../config/firebaseConfig';
+import { ShakeDetectionContext } from '../../src/context/ShakeDetectionContext';
 import { useTranslation } from 'react-i18next';
 
 const languageMapping = {
@@ -80,11 +83,10 @@ const ToggleSetting = ({ title, icon, value, onValueChange }) => (
 
 const ProfileScreen = ({ navigation }) => {
   const { t, i18n } = useTranslation();
-  // Use static data since Firestore is removed.
-  const [name] = useState('Lucy');
-  const [phone] = useState('+91 12345 678910');
-  // Remove loading logic, as there's no data fetching.
-
+  const [name, setName] = useState('Lucy');
+  const [phone, setPhone] = useState('+91 12345 678910');
+  const [isLoading, setIsLoading] = useState(true);
+  const { isShakeEnabled, setIsShakeEnabled } = useContext(ShakeDetectionContext);
 
   const preferences = [
     { title: t('profile.myPosts'), icon: 'account', screen: 'MyPosts' },
@@ -111,6 +113,11 @@ const ProfileScreen = ({ navigation }) => {
       icon: 'bell',
       options: [t('profile.allNotifications'), t('profile.mentionsOnly'), t('profile.muteAll')],
     },
+    {
+      title: t('profile.customizeThemes'),
+      icon: 'palette',
+      options: [t('profile.lightMode'), t('profile.darkMode'), t('profile.systemDefault')],
+    },
   ];
 
   const moreItems = [
@@ -118,6 +125,33 @@ const ProfileScreen = ({ navigation }) => {
     { title: t('profile.helpSupport'), icon: 'lifebuoy', screen: 'HelpSupport' },
     { title: t('profile.aboutUs'), icon: 'information', screen: 'AboutUs' },
   ];
+
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
+    const docRef = doc(db, 'users', user.uid);
+    const unsubscribe = onSnapshot(
+      docRef,
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data.name) setName(data.name);
+          if (data.phone) setPhone(data.phone);
+        } else {
+          Alert.alert(t('profile.noDataTitle'), t('profile.noDataMessage'));
+        }
+        setIsLoading(false);
+      },
+      (error) => {
+        Alert.alert(t('common.error'), error.message);
+        setIsLoading(false);
+      }
+    );
+    return () => unsubscribe();
+  }, [t]);
 
   const handleLogout = () => {
     Alert.alert(
@@ -134,6 +168,15 @@ const ProfileScreen = ({ navigation }) => {
       { cancelable: false }
     );
   };
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#ff5f96" />
+        <Text style={styles.loadingText}>{t('profile.loadingProfile')}</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -174,6 +217,12 @@ const ProfileScreen = ({ navigation }) => {
               onOptionSelect={item.onOptionSelect}
             />
           ))}
+          <ToggleSetting
+            title={t('profile.enableShake')}
+            icon="gesture-swipe"
+            value={isShakeEnabled}
+            onValueChange={(value) => setIsShakeEnabled(value)}
+          />
         </View>
 
         {/* More Section */}
