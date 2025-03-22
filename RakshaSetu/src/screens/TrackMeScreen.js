@@ -1130,7 +1130,7 @@ const styles = StyleSheet.create({
   },
   journeyButton: {
     position: 'absolute',
-    bottom: 50,
+    bottom: 80,
     alignSelf: 'center',
     backgroundColor: PINK,
     paddingVertical: 15,
@@ -1141,7 +1141,7 @@ const styles = StyleSheet.create({
   journeyButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   routeButton: {
     position: 'absolute',
-    bottom: 120,
+    bottom: 145,
     alignSelf: 'center',
     backgroundColor: '#007AFF',
     paddingVertical: 10,
@@ -1154,7 +1154,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 180,
     alignSelf: 'center',
-    backgroundColor: '#4CAF50',
+    backgroundColor: '4CAF50',
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 20,
