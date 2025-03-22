@@ -10,6 +10,7 @@ import Incidents from "./pages/Incidents";
 import Users from "./pages/Users";
 import EmergencyAlerts from "./pages/EmergencyAlerts";
 import Settings from "./pages/Settings";
+import FIR from "./pages/FIR";
 
 const App = () => {
   return (
@@ -37,6 +38,7 @@ const App = () => {
                   <Route path="/incidents" element={<Incidents />} />
                   <Route path="/users" element={<Users />} />
                   <Route path="/settings" element={<Settings />} />
+                  <Route path="/fir" element={<FIR />} />
                   {/* If any unknown path is visited, redirect to dashboard */}
                   <Route path="*" element={<Navigate to="/dashboard" />} />
                 </Routes>

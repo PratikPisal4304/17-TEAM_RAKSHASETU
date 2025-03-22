@@ -100,6 +100,12 @@ const Sidebar = () => {
             </Link>
           </li>
           <li>
+            <Link to="/fir" className="text-decoration-none">
+                FIR Dashboard
+            </Link>
+            </li>
+
+          <li>
             <Link
               to="/settings"
               className="d-flex align-items-center gap-2 text-dark p-2 rounded mb-1 text-decoration-none"
