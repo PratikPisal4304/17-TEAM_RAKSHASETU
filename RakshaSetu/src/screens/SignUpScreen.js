@@ -104,7 +104,7 @@ function SignUpScreen({ navigation }) {
             </TouchableOpacity>
 
             {/* Phone OTP */}
-            <TouchableOpacity style={styles.signUpButton} onPress={handleSendOTP}>
+            <TouchableOpacity style={styles.signUpButton} onPress={() => navigation.navigate('OTPVerificationScreen')}>
               <Text style={styles.signUpButtonText}>{t('login.sendOtpButtonText')}</Text>
             </TouchableOpacity>
 

@@ -91,7 +91,7 @@ function LoginScreen({ navigation }) {
             </TouchableOpacity>
 
             {/* Phone OTP */}
-            <TouchableOpacity style={styles.sendOtpButton} onPress={handleSendOTP}>
+            <TouchableOpacity style={styles.sendOtpButton} onPress={() => navigation.navigate('OTPVerificationScreen')}>
               <Text style={styles.sendOtpButtonText}>{t('login.sendOtpButtonText')}</Text>
             </TouchableOpacity>
 

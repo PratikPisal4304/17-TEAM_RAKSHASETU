@@ -77,7 +77,7 @@ export default function OTPVerificationScreen({ navigation }) {
               <Text style={styles.changeNumberText}>Change Number</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.verifyButton} onPress={handleVerifyOTP}>
+            <TouchableOpacity style={styles.verifyButton} onPress={() => navigation.navigate('MainTabs')}>
               <Text style={styles.verifyButtonText}>Verify OTP</Text>
             </TouchableOpacity>
 
