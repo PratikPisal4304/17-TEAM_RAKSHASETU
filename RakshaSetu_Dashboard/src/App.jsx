@@ -5,6 +5,7 @@ import Header from "./components/Header";
 import Dashboard from "./pages/Dashboard";
 import Analytics from "./pages/Analytics";
 import Incidents from "./pages/Incidents";
+import Users from "./pages/Users";
 
 const App = () => {
   return (
@@ -17,6 +18,7 @@ const App = () => {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/incidents" element={<Incidents />} />
+            <Route path="/users" element={<Users />} />
             {/* Redirect any unknown route to /dashboard */}
             <Route path="*" element={<Navigate to="/dashboard" />} />
           </Routes>
