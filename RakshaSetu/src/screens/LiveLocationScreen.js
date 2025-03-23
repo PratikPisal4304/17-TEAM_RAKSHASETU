@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { v4 as uuidv4 } from 'uuid';
+
 import { db } from '../../config/firebaseConfig'; // Adjust path as needed
 
 const LiveLocationScreen = ({ route, navigation }) => {
