@@ -140,7 +140,7 @@
    ```
 
 ## 📂 Additional Resources (UI Mockups, Presentation, Video)
-- 📊 
+- 📊 https://drive.google.com/drive/folders/1enX5OOQIjOuo-xSpmiOOmOyOBqR-uDGR?usp=sharing
 
 ## 🤝 Contributing
 We welcome contributions! 🚀 If you’d like to contribute, please:
