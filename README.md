@@ -99,12 +99,12 @@
 - **📝 FIR Reports**
 - **📍 Live Location Updates**
 - **📦 Secure Data Management**
-- **📢 Community Alerts Overview**
+- **👩‍💼 Job Listing**
 - **📜 Case Management**
 
 ## 🛠️ Tech Stack
 - **Frontend**: React + Vite (JavaScript)
-- **Backend**: Firebase (Firestore, Auth, Storage, FCM)
+- **Backend**: Firebase (Firestore, Auth, Storage)
 - **Authentication**: Firebase Authentication
 - **Data Storage**: Firestore Database
 - **Maps & Location Tracking**: Google Maps API
@@ -139,8 +139,8 @@
    npm run dev  # Starts the Vite development server
    ```
 
-## 📂 Additional Resources
-- 📊 [RakshaSetu Presentation](RakshaSetu/docs/RakshaSetu-Presentation.pptx)
+## 📂 Additional Resources (UI Mockups, Presentation, Video)
+- 📊 
 
 ## 🤝 Contributing
 We welcome contributions! 🚀 If you’d like to contribute, please:
