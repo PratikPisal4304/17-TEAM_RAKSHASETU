@@ -49,8 +49,8 @@
 
 1. **Clone the repository**
    ```sh
-   git clone https://github.com/PratikPisal4304/womensafetyapp.git
-   cd womensafetyapp
+   [https://github.com/PratikPisal4304/17-TEAM_RAKSHASETU.git]
+   cd RakshaSetu
    ```
 
 2. **Install dependencies**
@@ -113,7 +113,7 @@
 
 1. **Clone the repository**
    ```sh
-   git clone https://github.com/yourusername/RakshaSetu-Dashboard.git
+   [https://github.com/PratikPisal4304/17-TEAM_RAKSHASETU.git]
    cd RakshaSetu-Dashboard
    ```
 
