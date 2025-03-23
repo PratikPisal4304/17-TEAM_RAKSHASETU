@@ -89,52 +89,6 @@
    npm start
    ```
 
-
-# RakshaSetu
-
-**RakshaSetu** is an innovative women's safety mobile application, designed to provide comprehensive security, assistance, and empowerment through cutting-edge technology. With a mission to ensure safety and financial independence for women, RakshaSetu offers real-time emergency alerts, location tracking, AI-powered assistance, financial literacy, and a strong **community platform** for engagement and support. Built with **React Native (Expo)** and powered by **Firebase**, the app ensures seamless and reliable communication, equipping users with the tools they need to feel secure at all times.
-
-## 🚀 Key Features
-
-### 🆘 Emergency & Safety Features
-- **🚨 Emergency SOS Alert**
-- **📳 Shake Detection for SOS**
-- **📍 Live Location Tracking**
-- **📞 One-Tap Help**
-- **🛤️ Safe Route Navigation**
-- **📲 Fake Call Feature**
-- **📝 AI-Generated First Incident Report (FIR)**
-- **🛡️ Safety Assessment Modal**
-
-### 🌍 Community & Social Features
-- **📝 Community Forum**
-- **👍 Likes & Comments**
-- **📌 Location-Based Safety Discussions**
-
-### 💬 Communication & Assistance
-- **💬 In-App Chat (RakshaSetu Chat)**
-- **📢 Community Alerts**
-- **🤖 AI Chatbot Assistance**
-- **⚖️ Legal Assistant AI**
-- **🗣️ Multilingual Support**
-- **📌 Trusted Contact System**
-
-### 💰 Financial & Personal Security
-- **📚 Financial Skill Hub**
-- **🔒 Secure Data Storage**
-
-### 💼 Job Market                                                                          
-- **👩‍💼 Job Listing**
-
-## 🛠️ Tech Stack
-- **Frontend**: React Native (Expo)
-- **Backend**: Firebase (Firestore, Auth, Storage)
-- **Environment Variables**: `.env`
-- **Location & Maps**: Google Maps API 
-- **Chat & Communication**: Firestore real-time chat
-- **AI Integrations**: Gemini AI, OpenAI
-- **Community Features**: Firebase Firestore
-
 # RakshaSetu Dashboard
 
 **RakshaSetu Dashboard** is a web-based **admin panel** built with **React + Vite (JavaScript) and Firebase**. It serves as a centralized platform for **administrators and police authorities** to monitor and manage critical safety data.
