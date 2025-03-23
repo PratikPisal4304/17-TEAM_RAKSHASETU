@@ -4,45 +4,64 @@ import {
   HiOutlineBellAlert,
   HiOutlineHome,
   HiOutlineUsers,
-  HiOutlineMapPin,
-  HiOutlineCog,
-  HiOutlineArrowRightOnRectangle,
   HiOutlineExclamationCircle,
   HiOutlineChartBar,
+  HiOutlineCog,
+  HiOutlineArrowRightOnRectangle,
 } from "react-icons/hi2";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { getFirestore, doc, getDoc } from "firebase/firestore";
 
 const Sidebar = ({ isDrawerActive, onClose }) => {
   const navigate = useNavigate();
   const auth = getAuth();
+  const db = getFirestore();
 
   // State for current user from Firebase Auth
   const [user, setUser] = useState(null);
+  // State for user role fetched from Firestore
+  const [userRole, setUserRole] = useState(null);
 
   // Listen for auth state changes
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+      if (currentUser) {
+        // Fetch the additional user info from Firestore
+        const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+        if (userDoc.exists()) {
+          setUserRole(userDoc.data().role);
+        }
+      }
     });
     return () => unsubscribe();
-  }, [auth]);
+  }, [auth, db]);
 
   const handleLogout = () => {
-    // Add your logout logic here (e.g., sign out using Firebase Auth)
     auth.signOut().then(() => {
       navigate("/login");
     });
   };
 
-  const navLinks = [
+  // Define navigation links for Police users (excluding JobListings)
+  const policeNavLinks = [
     { name: "Dashboard", path: "/dashboard", icon: HiOutlineHome },
     { name: "Emergency Alerts", path: "/emergency-alerts", icon: HiOutlineBellAlert },
     { name: "FIR", path: "/FIR", icon: HiOutlineExclamationCircle },
     { name: "Users", path: "/users", icon: HiOutlineUsers },
-    // { name: "Safe Zones", path: "/safe-zones", icon: HiOutlineMapPin },
     { name: "Analytics", path: "/analytics", icon: HiOutlineChartBar },
     { name: "Settings", path: "/Settings", icon: HiOutlineCog },
   ];
+
+  // For Admin, show only JobListings and Settings
+  const adminNavLinks = [
+    { name: "JobListings", path: "/jobs", icon: HiOutlineCog },
+    { name: "CounselorsManagement", path: "/Counselors", icon: HiOutlineCog},
+    { name: "Settings", path: "/Settings", icon: HiOutlineCog },
+  ];
+
+  // Select the nav links to render based on userRole
+  const navLinks = userRole === "admin" ? adminNavLinks : policeNavLinks;
 
   return (
     <aside
@@ -84,7 +103,6 @@ const Sidebar = ({ isDrawerActive, onClose }) => {
             </small>
           </div>
         </div>
-        {/* You can add additional user info or controls here if needed */}
       </div>
 
       {/* Navigation Links */}
@@ -94,7 +112,7 @@ const Sidebar = ({ isDrawerActive, onClose }) => {
             <li key={link.name} className="nav-item">
               <NavLink
                 to={link.path}
-                onClick={onClose} // Close drawer on navigation
+                onClick={onClose}
                 className={({ isActive }) =>
                   `nav-link d-flex align-items-center gap-2 rounded ${
                     isActive

@@ -3,6 +3,7 @@ import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "../firebaseConfig"; // Adjust path as needed
 
 const IncidentSources = () => {
+  // Initialize counts for the two keys we need
   const [sosButtonCount, setSosButtonCount] = useState(0);
   const [reportFormCount, setReportFormCount] = useState(0);
 
@@ -20,8 +21,9 @@ const IncidentSources = () => {
       let count = 0;
       snapshot.docs.forEach((doc) => {
         const data = doc.data();
-        // Check if the source field is "Report Form"
-        if (data.source === "Report Form") {
+        // If the source field is defined, count only if it equals "Report Form".
+        // If it's undefined, assume it's from Report Form.
+        if (!data.source || data.source === "Report Form") {
           count++;
         }
       });
@@ -30,7 +32,7 @@ const IncidentSources = () => {
     return () => unsubscribe();
   }, []);
 
-  // Create an array for rendering the sources with appropriate styling.
+  // Create an array for rendering the sources with styling.
   const sources = [
     { label: "SOS Button", value: sosButtonCount, color: "text-primary" },
     { label: "Report Form", value: reportFormCount, color: "text-danger" },

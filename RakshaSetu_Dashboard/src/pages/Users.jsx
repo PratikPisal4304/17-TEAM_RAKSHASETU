@@ -90,17 +90,9 @@ const Users = () => {
         </div>
 
         <div className="col-auto">
-          <button className="btn btn-outline-secondary d-flex align-items-center gap-1">
-            <HiOutlineAdjustmentsHorizontal />
-            Filters
-          </button>
         </div>
 
         <div className="col-auto">
-          <button className="btn btn-danger d-flex align-items-center gap-1">
-            <HiOutlinePlus />
-            Add New User
-          </button>
         </div>
       </div>
 

@@ -1,16 +1,79 @@
 import React, { useState, useEffect } from "react";
-import {
-  HiOutlineSpeakerWave,
-  HiOutlineSpeakerXMark,
-  HiOutlineMap,
-  HiOutlineBars3,
-} from "react-icons/hi2";
+import { HiOutlineMap, HiOutlineBars3 } from "react-icons/hi2";
 import { collection, doc, getDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../firebaseConfig"; // Adjust path as needed
 
+// Import React Leaflet components and leaflet CSS
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+
+// Import custom pin image and marker shadow
+import pinIconUrl from "../assets/pin.png"; // Make sure this file exists
+import markerShadow from "leaflet/dist/images/marker-shadow.png";
+
+// Create a custom pin icon using the provided pin image
+const pinIcon = new L.Icon({
+  iconUrl: pinIconUrl,
+  iconSize: [30, 45], // Adjust size as needed
+  iconAnchor: [15, 45],
+  popupAnchor: [0, -45],
+  shadowUrl: markerShadow,
+  shadowSize: [41, 41],
+});
+
+// Component to update the map bounds to fit all markers
+const FitBoundsUpdater = ({ markers }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    if (markers.length > 0) {
+      const bounds = markers.map((alert) => [alert.latitude, alert.longitude]);
+      map.fitBounds(bounds, { padding: [50, 50] });
+    }
+  }, [markers, map]);
+
+  return null;
+};
+
+// Map view component to render the map with markers using the custom pin icon
+const MapViewComponent = ({ alerts }) => {
+  // Filter alerts that have valid latitude and longitude
+  const markers = alerts.filter((alert) => alert.latitude && alert.longitude);
+
+  // Set a default center (will be overridden by FitBoundsUpdater)
+  const defaultCenter = [20.5937, 78.9629]; // Example default (center of India)
+
+  return (
+    <MapContainer center={defaultCenter} zoom={13} style={{ height: "300px", width: "100%" }}>
+      <TileLayer
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+      />
+      {markers.map((alert) => (
+        <Marker key={alert.id} position={[alert.latitude, alert.longitude]} icon={pinIcon}>
+          <Popup>
+            <div>
+              <strong>{alert.userName}</strong>
+              <br />
+              {alert.timestamp
+                ? new Date(alert.timestamp.seconds * 1000).toLocaleString()
+                : ""}
+              <br />
+              <small>
+                {alert.latitude.toFixed(4)}, {alert.longitude.toFixed(4)}
+              </small>
+            </div>
+          </Popup>
+        </Marker>
+      ))}
+      <FitBoundsUpdater markers={markers} />
+    </MapContainer>
+  );
+};
+
 const EmergencyAlerts = () => {
-  // Toggles
-  const [soundOn, setSoundOn] = useState(true);
+  // Toggle for Map View
   const [mapView, setMapView] = useState(false);
 
   // Modal state
@@ -22,6 +85,9 @@ const EmergencyAlerts = () => {
   // Alerts merged with user data
   const [alertsWithUser, setAlertsWithUser] = useState([]);
 
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
+
   // 1) Listen to "sosAlerts" in real time
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "sosAlerts"), (snapshot) => {
@@ -29,12 +95,14 @@ const EmergencyAlerts = () => {
         id: doc.id,
         ...doc.data(),
       }));
+      // Sort alerts by timestamp (latest first)
+      fetched.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
       setAlerts(fetched);
     });
     return () => unsubscribe();
   }, []);
 
-  // 2) For each alert, fetch user doc (if userId exists) and merge user data
+  // 2) Fetch user details for each alert
   useEffect(() => {
     async function mergeUserData() {
       const updated = await Promise.all(
@@ -72,10 +140,15 @@ const EmergencyAlerts = () => {
     }
   }, [alerts]);
 
-  // Simple stat: total number of alerts
-  const totalAlerts = alertsWithUser.length;
+  // Filter alerts based on search query
+  const filteredAlerts = alertsWithUser.filter((alert) =>
+    alert.userName.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-  // Open modal with selected alert details
+  // Total alerts
+  const totalAlerts = filteredAlerts.length;
+
+  // Open modal
   const handleDetails = (alert) => {
     setSelectedAlert(alert);
     setShowModal(true);
@@ -106,25 +179,8 @@ const EmergencyAlerts = () => {
           </p>
         </div>
 
-        {/* Toggles */}
+        {/* View toggle */}
         <div className="d-flex gap-2 mt-3 mt-sm-0">
-          {/* Sound toggle */}
-          <button
-            className="btn btn-light d-flex align-items-center gap-1"
-            onClick={() => setSoundOn(!soundOn)}
-          >
-            {soundOn ? (
-              <>
-                <HiOutlineSpeakerWave /> Sound On
-              </>
-            ) : (
-              <>
-                <HiOutlineSpeakerXMark /> Sound Off
-              </>
-            )}
-          </button>
-
-          {/* View toggle */}
           <button
             className={`btn ${mapView ? "btn-light" : "btn-primary"} d-flex align-items-center gap-1`}
             onClick={() => setMapView(false)}
@@ -152,18 +208,23 @@ const EmergencyAlerts = () => {
         </div>
       </div>
 
+      {/* Search Bar */}
+      <div className="mb-3">
+        <input
+          type="text"
+          className="form-control"
+          placeholder="Search by User Name..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </div>
+
       {/* Toggle between list view and map view */}
       {mapView ? (
         <div className="card shadow-sm">
           <div className="card-body">
             <h5 className="card-title">Map View</h5>
-            <div
-              className="border border-secondary border-opacity-25 rounded d-flex align-items-center justify-content-center"
-              style={{ height: "300px", backgroundColor: "#f8f9fa" }}
-            >
-              {/* Replace with an actual map component */}
-              <span className="text-secondary">Map Placeholder</span>
-            </div>
+            <MapViewComponent alerts={filteredAlerts} />
           </div>
         </div>
       ) : (
@@ -175,7 +236,7 @@ const EmergencyAlerts = () => {
             </p>
 
             {/* List of alerts */}
-            {alertsWithUser.map((alert) => (
+            {filteredAlerts.map((alert) => (
               <div
                 key={alert.id}
                 className="bg-white p-3 rounded-2 shadow-sm mb-3 d-flex flex-column flex-md-row align-items-md-center justify-content-between"
@@ -191,11 +252,6 @@ const EmergencyAlerts = () => {
                       <strong>Time:</strong> {formatTimestamp(alert.timestamp)}
                     </div>
                   )}
-                  {alert.latitude && alert.longitude && (
-                    <small className="text-muted">
-                      Latitude: {alert.latitude} | Longitude: {alert.longitude}
-                    </small>
-                  )}
                 </div>
                 <div className="d-flex gap-2">
                   <button className="btn btn-warning">Respond</button>
@@ -209,7 +265,7 @@ const EmergencyAlerts = () => {
               </div>
             ))}
 
-            {alertsWithUser.length === 0 && (
+            {filteredAlerts.length === 0 && (
               <div className="alert alert-info">No SOS alerts found.</div>
             )}
           </div>
@@ -218,17 +274,13 @@ const EmergencyAlerts = () => {
 
       {/* Alert Details Modal */}
       {selectedAlert && (
-        <AlertDetailsModal
-          show={showModal}
-          alert={selectedAlert}
-          onClose={handleCloseModal}
-        />
+        <AlertDetailsModal show={showModal} alert={selectedAlert} onClose={handleCloseModal} />
       )}
     </div>
   );
 };
 
-// Alert Details Modal
+// Alert Details Modal Component
 function AlertDetailsModal({ show, alert, onClose }) {
   if (!show) return null;
 
@@ -241,7 +293,10 @@ function AlertDetailsModal({ show, alert, onClose }) {
   return (
     <div
       className={`modal fade ${show ? "show" : ""}`}
-      style={{ display: show ? "block" : "none", background: "rgba(0,0,0,0.5)" }}
+      style={{
+        display: show ? "block" : "none",
+        background: "rgba(0,0,0,0.5)",
+      }}
       aria-modal={show}
       role="dialog"
     >
@@ -249,18 +304,14 @@ function AlertDetailsModal({ show, alert, onClose }) {
         <div className="modal-content">
           <div className="modal-header">
             <h5 className="modal-title">Alert Details</h5>
-            <button
-              type="button"
-              className="btn-close"
-              onClick={onClose}
-              aria-label="Close"
-            ></button>
+            <button type="button" className="btn-close" onClick={onClose} aria-label="Close"></button>
           </div>
           <div className="modal-body">
             {/* SOS Message */}
             <p>
               <strong>SOS Message:</strong> RakshaSetu SOS Emergency, please help me.
             </p>
+
             {/* My Location Section */}
             <p>
               <strong>My Location:</strong>{" "}
@@ -277,6 +328,29 @@ function AlertDetailsModal({ show, alert, onClose }) {
                 "N/A"
               )}
             </p>
+
+            {/* Live Location Link */}
+            {alert.liveLocationLink && (
+              <p>
+                <strong>Live Location:</strong>{" "}
+                <a
+                  href={alert.liveLocationLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-decoration-none"
+                >
+                  View Live Location
+                </a>
+              </p>
+            )}
+
+            {/* Battery Percentage */}
+            {typeof alert.batteryPercentage !== "undefined" && (
+              <p>
+                <strong>Battery Level:</strong> {alert.batteryPercentage}%
+              </p>
+            )}
+
             <p>
               <strong>User Name:</strong> {alert.userName}
               <br />
@@ -284,11 +358,13 @@ function AlertDetailsModal({ show, alert, onClose }) {
               <br />
               <strong>Phone:</strong> {alert.userPhone}
             </p>
+
             {alert.timestamp && (
               <p>
                 <strong>Time:</strong> {formatTimestamp(alert.timestamp)}
               </p>
             )}
+
             {/* Street View URLs */}
             {alert.streetViewUrls && Array.isArray(alert.streetViewUrls) && (
               <div className="mb-3">
@@ -328,10 +404,6 @@ function formatTimestamp(ts) {
     return ts.toDate().toLocaleString();
   }
   return ts;
-}
-
-function handleCloseModal() {
-  // Placeholder: actual state is handled in the parent component
 }
 
 export default EmergencyAlerts;

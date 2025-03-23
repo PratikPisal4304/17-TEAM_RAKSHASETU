@@ -10,13 +10,15 @@ import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "../firebaseConfig";
 
 const Analytics = () => {
-  // State for dynamic metrics
+  // State for Active Alerts (from sosAlerts)
   const [activeAlerts, setActiveAlerts] = useState(0);
+  // State for Total Incidents and Resolved Incidents (from incident_reports)
   const [totalIncidents, setTotalIncidents] = useState(0);
   const [resolvedIncidents, setResolvedIncidents] = useState(0);
+  // State for Live Helpers (from helpers collection)
   const [liveHelpers, setLiveHelpers] = useState(0);
 
-  // Active Alerts from "sosAlerts" collection
+  // Fetch Active Alerts from "sosAlerts"
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "sosAlerts"), (snapshot) => {
       setActiveAlerts(snapshot.size);
@@ -24,7 +26,7 @@ const Analytics = () => {
     return () => unsubscribe();
   }, []);
 
-  // Total Incidents from "incident_reports" collection
+  // Fetch Total Incidents from "incident_reports"
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "incident_reports"), (snapshot) => {
       setTotalIncidents(snapshot.size);
@@ -32,7 +34,7 @@ const Analytics = () => {
     return () => unsubscribe();
   }, []);
 
-  // Resolved Incidents from "incident_reports" collection where status is "resolved"
+  // Fetch Resolved Incidents from "incident_reports" (where status is "resolved")
   useEffect(() => {
     const q = query(collection(db, "incident_reports"), where("status", "==", "resolved"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -41,7 +43,7 @@ const Analytics = () => {
     return () => unsubscribe();
   }, []);
 
-  // Live Helpers from "helpers" collection (adjust if needed)
+  // Fetch Live Helpers from "helpers" collection (if available)
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "helpers"), (snapshot) => {
       setLiveHelpers(snapshot.size);
@@ -49,9 +51,14 @@ const Analytics = () => {
     return () => unsubscribe();
   }, []);
 
-  // Compute Response Rate: (resolved / total) * 100
+  // Compute dynamic percentages
+  const activeAlertsPercentage =
+    totalIncidents > 0 ? (((activeAlerts) / totalIncidents) * 100).toFixed(1) + "%" : "0%";
   const responseRate =
     totalIncidents > 0 ? ((resolvedIncidents / totalIncidents) * 100).toFixed(1) + "%" : "0%";
+  // For Live Helpers, without historical baseline we simply show the count; or you can compute a percentage if needed.
+  const liveHelpersPercentage = ""; // Not computed dynamically here
+  const totalIncidentsPercentage = "100%"; // Always 100% by definition
 
   return (
     <div className="container-fluid">
@@ -68,7 +75,7 @@ const Analytics = () => {
           <CardStats
             title="Active Alerts"
             value={activeAlerts}
-            percentage="+12%"
+            percentage={activeAlertsPercentage}
             status="in last 7 days"
             iconColor="bg-primary text-white"
             icon="bell"
@@ -78,7 +85,7 @@ const Analytics = () => {
           <CardStats
             title="Response Rate"
             value={responseRate}
-            percentage="+0.59%"
+            percentage={responseRate}
             status="Currently active now"
             iconColor="bg-success text-white"
             icon="check"
@@ -88,7 +95,7 @@ const Analytics = () => {
           <CardStats
             title="Live Helpers"
             value={liveHelpers}
-            percentage="-11.29%"
+            percentage={liveHelpersPercentage}
             status="Currently active now"
             iconColor="bg-purple text-white"
             icon="users"
@@ -98,7 +105,7 @@ const Analytics = () => {
           <CardStats
             title="Total Incidents"
             value={totalIncidents}
-            percentage="+1.29%"
+            percentage={totalIncidentsPercentage}
             status="Currently active now"
             iconColor="bg-danger text-white"
             icon="exclamation"

@@ -145,16 +145,8 @@ const Incidents = () => {
           </select>
         </div>
         <div className="col-auto">
-          <button className="btn btn-outline-secondary d-flex align-items-center gap-1">
-            <HiOutlineAdjustmentsHorizontal />
-            Filters
-          </button>
         </div>
         <div className="col-auto">
-          <button className="btn btn-danger d-flex align-items-center gap-1">
-            <HiOutlinePlus />
-            Add Incident
-          </button>
         </div>
       </div>
 

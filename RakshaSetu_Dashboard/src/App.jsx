@@ -11,7 +11,6 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Settings from "./pages/Settings";
 import JobListings from "./pages/JobListings";
-import CounselorsManagement from "./pages/CounselorsManagement";
 
 const App = () => {
   return (
@@ -39,7 +38,6 @@ const App = () => {
                   <Route path="/emergency-alerts" element={<EmergencyAlerts />} />
                   <Route path="/users" element={<Users />} />
                   <Route path="/jobs" element={<JobListings />} />
-                  <Route path="/counselors" element={<CounselorsManagement />} />
                   <Route path="/Settings" element={<Settings />} />
                   {/* Add more routes as needed */}
                   <Route path="*" element={<Navigate to="/dashboard" />} />
