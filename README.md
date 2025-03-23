@@ -49,7 +49,7 @@
 
 1. **Clone the repository**
    ```sh
-   [https://github.com/PratikPisal4304/17-TEAM_RAKSHASETU.git]
+   https://github.com/PratikPisal4304/17-TEAM_RAKSHASETU.git
    cd RakshaSetu
    ```
 
@@ -113,8 +113,8 @@
 
 1. **Clone the repository**
    ```sh
-   [https://github.com/PratikPisal4304/17-TEAM_RAKSHASETU.git]
-   cd RakshaSetu-Dashboard
+   https://github.com/PratikPisal4304/17-TEAM_RAKSHASETU.git
+   cd RakshaSetu_Dashboard
    ```
 
 2. **Install dependencies**
